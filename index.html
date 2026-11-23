@@ -153,9 +153,32 @@ tr.det td{background:var(--soft);border-top:0;padding:4px 12px 16px}
 footer{color:var(--muted);font-size:12.5px}
 footer details summary{cursor:pointer;font-weight:600;color:var(--accent)}
 footer ul{margin:8px 0 0;padding-inline-start:18px;display:grid;gap:4px}
+/* v2 (23 Nov): company navigation + one section per company */
+.conav{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 2px 8px rgba(23,32,44,.05)}
+.conav-in{display:flex;gap:6px;overflow-x:auto;padding-block:8px;scrollbar-width:thin}
+.cnav{flex:0 0 auto;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.cnav:hover{border-color:var(--accent)}
+.cnav[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnav .k{font-weight:500;opacity:.75;font-variant-numeric:tabular-nums}
+.cnav .dot{min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--late);color:#fff;font-size:11px;font-weight:700;display:inline-grid;place-items:center}
+.cnav.zero{color:var(--muted)}
+.groups{display:grid;gap:18px}
+.cosec{display:grid;gap:10px;scroll-margin-top:64px}
+.cohd{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;justify-content:space-between;border-bottom:2px solid var(--line);padding-bottom:8px}
+.cohd h3{margin:0;font-size:19px;font-weight:800;display:flex;align-items:center;gap:10px}
+.cohd h3 .ini{width:30px;height:30px;border-radius:8px;background:var(--soft);color:var(--accent);display:inline-grid;place-items:center;font-size:12px;font-weight:800;letter-spacing:.02em}
+.cometa{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);align-items:center}
+.cometa b{color:var(--fg);font-variant-numeric:tabular-nums}
+.cometa .late b{color:var(--late)}.cometa .done b{color:var(--done)}.cometa .hold b{color:var(--hold)}
+.minibar{width:120px;height:8px;border-radius:999px;background:var(--line);overflow:hidden;display:inline-block}
+.minibar span{display:block;height:100%;background:var(--done)}
+.cosec table{min-width:760px;table-layout:fixed}
+.cosec th:nth-child(1){width:44%}.cosec th:nth-child(2){width:21%}.cosec th:nth-child(3){width:13%}.cosec th:nth-child(4){width:10%}.cosec th:nth-child(5){width:12%}
+.cosec td.ac{min-width:0}.cosec td.poc{min-width:0}
+.toplink{font-size:12.5px;color:var(--accent);cursor:pointer;background:none;border:0;padding:0}
 mark{background:#FFE58A;color:#111;border-radius:2px}
 @media (prefers-reduced-motion:no-preference){.panel,.kpi{transition:border-color .15s}}
-@media print{header.band .hbar,.filters,.row-acts,.btn,footer details{display:none!important}header.band{background:none;color:#000}.brand .upd,.eyebrow{color:#333}body{background:#fff;color:#000}.panel,.kpi,.tbl{box-shadow:none}table{min-width:0}}
+@media print{.conav,.toplink,header.band .hbar,.filters,.row-acts,.btn,footer details{display:none!important}header.band{background:none;color:#000}.brand .upd,.eyebrow{color:#333}body{background:#fff;color:#000}.panel,.kpi,.tbl{box-shadow:none}table{min-width:0}}
 </style>
 </head>
 <body>
@@ -173,6 +196,7 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
   </div>
  </div>
 </header>
+<nav class="conav" id="conav" aria-label="Companies" hidden><div class="wrap"><div class="conav-in" id="conav-in"></div></div></nav>
 <main>
  <div class="wrap" id="app">
   <div class="gate" id="gate"><h2>Loading the tracker…</h2><p class="note" id="gate-msg">Opening the private link.</p></div>
@@ -189,9 +213,8 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
    </section>
   </div>
   <section class="panel" id="reg" hidden aria-labelledby="h-reg">
-   <div class="ph"><h2 id="h-reg">Action register</h2><span class="sub">Click an action for notes, next step and history</span></div>
+   <div class="ph"><h2 id="h-reg">Actions by company</h2><span class="sub">Pick a company above, or scroll through each company. Click an action for notes, next step and history.</span></div>
    <div class="filters" id="filters">
-    <select class="sel" id="f-co" aria-label="Company"></select>
     <select class="sel" id="f-poc" aria-label="Owner"></select>
     <span class="sep"></span>
     <span id="f-st"></span>
@@ -200,14 +223,7 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
     <button class="chip" id="f-clear" type="button">Clear</button>
     <span class="count" id="count"></span>
    </div>
-   <div class="tbl"><table><thead><tr>
-    <th><button type="button" data-sort="company">Company</button></th>
-    <th><button type="button" data-sort="action">Action</button></th>
-    <th>POC / Support</th>
-    <th><button type="button" data-sort="due">Due</button></th>
-    <th><button type="button" data-sort="priority">Priority</button></th>
-    <th><button type="button" data-sort="status">Status</button></th>
-   </tr></thead><tbody id="tbody"></tbody></table></div>
+   <div class="groups" id="groups"></div>
    <div class="row-acts" id="reg-acts" hidden><button class="btn" id="b-add" type="button">Add action</button><button class="btn ghost" id="b-import" type="button">Import Excel</button></div>
   </section>
   <section class="panel" id="gapsec" hidden aria-labelledby="h-gap">
@@ -238,6 +254,9 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
 var REPO='AlHarith-Hindi/growth-office-tracker', FILE='data.enc.json', LS='got-editor';
 var STATUSES=['Open','In Progress','On Hold','Completed'], PRIS=['High','Medium','Low'];
 var KEY=null, D=null, sha=null, ed=null;
+var NAMES={'MITHAQUNA':'Mithaquna','KOUSHAN':'Koushan','TASHEEL':'Tasheel','MIDWAM':'Midwam','ALBADR':'Al Badr','KNKT':'KNKT','3RD LINE':'3rd Line','ENTERGAME':'EnterGame','ZFP':'ZFP','SLFE':'SLFE','FIRST SERVE':'First Serve'};
+function nm(c){return NAMES[c]||String(c||'').replace(/\w\S*/g,function(w){return w.charAt(0)+w.slice(1).toLowerCase();});}
+function slug(c){return String(c).toLowerCase().replace(/[^a-z0-9]+/g,'-');}
 var st={co:'',poc:'',status:'',pri:'',late:false,q:'',gap:'',sort:'due',dir:1,open:{}};
 function $(id){return document.getElementById(id);}
 function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;}
@@ -296,7 +315,7 @@ function render(){
  var u=Date.parse(D.updated);var ud=new Date(u+3*3600e3).toISOString();
  $('upd').textContent='Updated '+fmtD(ud.slice(0,10))+' '+ud.slice(11,16)+' Riyadh · '+items().length+' actions across '+D.companies.length+' companies';
  $('src').textContent='Source: '+(D.source||'—')+'.';
- kpis();attention();cobars();filters();table();gaps();
+ kpis();attention();cobars();filters();conav();table();gaps();
  $('reg-acts').hidden=!(ed&&ed.token);
  $('b-edit').textContent=ed&&ed.token?'Editing as '+(ed.name||'editor'):'Edit';$('b-edit').classList.toggle('on',!!(ed&&ed.token));}
 function kpis(){var I=items(),K=$('kpis');K.textContent='';
@@ -309,15 +328,15 @@ function attention(){var I=items(),L=$('att');L.textContent='';
  var all=a.concat(s);if(!all.length){L.appendChild(el('li','empty','Nothing overdue or due in the next 14 days.'));return;}
  all.forEach(function(p){var r=p[0],li=el('li');li.tabIndex=0;var mid=el('div');mid.append(el('div','t',r.action),el('div','o',(r.poc?r.poc:'No owner')+(r.priority?' · '+r.priority+' priority':'')));
   var right=el('span','pill '+(p[1]==='late'?'s-late':'s-hold'),p[1]==='late'?lateBy(r)+'d overdue':'Due '+fmtD(r.due));
-  li.append(el('span','co',r.company),mid,right);li.onclick=li.onkeydown=function(e){if(e.type==='keydown'&&e.key!=='Enter')return;focusItem(r.id);};L.appendChild(li);});}
+  li.append(el('span','co',nm(r.company)),mid,right);li.onclick=li.onkeydown=function(e){if(e.type==='keydown'&&e.key!=='Enter')return;focusItem(r.id);};L.appendChild(li);});}
 function cobars(){var C=$('cobars');C.textContent='';var I=items();var max=Math.max.apply(null,D.companies.map(function(c){return I.filter(function(r){return r.company===c;}).length;}).concat([1]));
  D.companies.forEach(function(c){var R=I.filter(function(r){return r.company===c;});var b=el('button','cob');b.type='button';b.setAttribute('aria-pressed',String(st.co===c));
   var bar=el('div','bar');bar.style.width=(R.length?Math.max(8,R.length/max*100):100)+'%';if(!R.length)bar.style.opacity='.5';
   [['Completed','var(--done)'],['In Progress','var(--prog)'],['On Hold','var(--hold)'],['Open','var(--open)']].forEach(function(s){var n=R.filter(function(r){return r.status===s[0];}).length;if(n){var sp=el('span');sp.style.width=(n/R.length*100)+'%';sp.style.background=s[1];sp.title=n+' '+s[0].toLowerCase();bar.appendChild(sp);}});
   var lt=R.filter(late).length;var cnt=el('span','c',R.length?String(R.filter(function(r){return r.status==='Completed';}).length)+'/'+R.length+' ':'none ');if(lt){cnt.appendChild(el('b',null,'●'+lt));}
-  b.append(el('span','n',c),bar,cnt);b.title=c+': '+R.length+' actions, '+lt+' overdue';b.onclick=function(){st.co=st.co===c?'':c;render();};C.appendChild(b);});}
+  b.append(el('span','n',nm(c)),bar,cnt);b.title=nm(c)+': '+R.length+' actions, '+lt+' overdue';b.onclick=function(){pickCo(c);};C.appendChild(b);});}
 function chipRow(box,vals,cur,label,set,count){box.textContent='';vals.forEach(function(v){var b=el('button','chip',label(v));b.type='button';b.setAttribute('aria-pressed',String(cur===v));var n=count(v);b.appendChild(el('span','k',String(n)));b.onclick=function(){set(cur===v?'':v);render();};box.appendChild(b);});}
-function filters(){var co=$('f-co');co.textContent='';co.appendChild(new Option('All companies',''));D.companies.forEach(function(c){co.appendChild(new Option(c+' ('+items().filter(function(r){return r.company===c&&match(r,'co');}).length+')',c));});co.value=st.co;
+function filters(){
  var po=$('f-poc');po.textContent='';po.appendChild(new Option('All owners',''));owners().forEach(function(o){po.appendChild(new Option(o,o));});po.value=st.poc;
  chipRow($('f-st'),['late','In Progress','On Hold','Open','Completed'],st.status,function(v){return v==='late'?'Overdue':v;},function(v){st.status=v;},function(v){return items().filter(function(r){return match(r,'status')&&(v==='late'?late(r):r.status===v);}).length;});
  chipRow($('f-pr'),['High','Medium','Low','None'],st.pri,function(v){return v==='None'?'No priority':v;},function(v){st.pri=v;},function(v){return items().filter(function(r){return match(r,'pri')&&(r.priority||'None')===v;}).length;});}
@@ -330,19 +349,38 @@ function sorter(a,b){var k=st.sort,x,y;
  else{x=a.action.toLowerCase();y=b.action.toLowerCase();}
  return (x<y?-1:x>y?1:0)*st.dir||a.action.localeCompare(b.action);}
 function hl(node,text){if(!st.q){node.textContent=text;return;}var t=String(text||''),i=t.toLowerCase().indexOf(st.q.toLowerCase());if(i<0){node.textContent=t;return;}node.append(t.slice(0,i));node.appendChild(el('mark',null,t.slice(i,i+st.q.length)));node.append(t.slice(i+st.q.length));}
-function table(){var B=$('tbody');B.textContent='';var R=items().filter(function(r){return match(r);}).sort(sorter);
- $('count').textContent=R.length+' of '+items().length+' actions';
- if(!R.length){var tr0=el('tr'),td0=el('td','empty','No actions match these filters.');td0.colSpan=6;tr0.appendChild(td0);B.appendChild(tr0);return;}
- R.forEach(function(r){var tr=el('tr','row'+(r.status==='Completed'?' done':''));tr.id='r-'+r.id;tr.tabIndex=0;tr.setAttribute('aria-expanded',String(!!st.open[r.id]));
-  tr.appendChild(el('td','co',r.company));
+function pickCo(c){st.co=st.co===c?'':c;render();var t=st.co?$('co-'+slug(st.co)):$('reg');if(t)t.scrollIntoView({behavior:'smooth',block:'start'});}
+function conav(){var N=$('conav-in');N.textContent='';var I=items();
+ function btn(label,cur,fn,cls){var b=el('button','cnav'+(cls?' '+cls:''));b.type='button';b.setAttribute('aria-current',String(!!cur));b.append(label);b.onclick=fn;N.appendChild(b);return b;}
+ btn('Overview',false,function(){window.scrollTo({top:0,behavior:'smooth'});});
+ var all=btn('All companies',!st.co,function(){st.co='';render();$('reg').scrollIntoView({behavior:'smooth',block:'start'});});all.appendChild(el('span','k',String(I.length)));
+ D.companies.forEach(function(c){var R=I.filter(function(r){return r.company===c;}),lt=R.filter(late).length;var b=btn(nm(c),st.co===c,function(){pickCo(c);},R.length?'':'zero');b.appendChild(el('span','k',String(R.length)));if(lt){var d=el('span','dot',String(lt));d.title=lt+' overdue';b.appendChild(d);}});}
+var THEAD='<thead><tr><th><button type="button" data-sort="action">Action</button></th><th>POC / Support</th><th><button type="button" data-sort="due">Due</button></th><th><button type="button" data-sort="priority">Priority</button></th><th><button type="button" data-sort="status">Status</button></th></tr></thead>';
+function rowEl(r){var tr=el('tr','row'+(r.status==='Completed'?' done':''));tr.id='r-'+r.id;tr.tabIndex=0;tr.setAttribute('aria-expanded',String(!!st.open[r.id]));
   var ac=el('td','ac');var t=el('div','t');hl(t,r.action);ac.appendChild(t);var x=r.next||r.notes;if(x){var xx=el('div','x');hl(xx,(r.next?'Next: ':'')+x);ac.appendChild(xx);}tr.appendChild(ac);
   var pc=el('td','poc');hl(pc,r.poc||'—');if(!r.poc)pc.style.color='var(--muted)';tr.appendChild(pc);
   var dd=el('td','d');if(isDate(r.due)){dd.append(fmt(r.due));if(late(r)){dd.className+=' due-late';dd.appendChild(el('span','tag',lateBy(r)+' days overdue'));}else if(soon(r)){dd.className+=' due-soon';dd.appendChild(el('span','tag','in '+days(today(),r.due)+' days'));}}else{dd.textContent=r.due||'—';dd.style.color='var(--muted)';}tr.appendChild(dd);
   var pr=el('td');if(r.priority)pr.appendChild(el('span','pill p-'+r.priority,r.priority));else pr.appendChild(el('span','note','—'));tr.appendChild(pr);
   var sk=sKey(r);var sc=el('td');sc.appendChild(el('span','pill s-'+sk,late(r)?'Overdue':r.status));if(late(r)&&r.status!=='In Progress'){sc.appendChild(el('span','tag note',r.status));}tr.appendChild(sc);
-  tr.onclick=function(){st.open[r.id]=!st.open[r.id];table();};tr.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();tr.onclick();}};
-  B.appendChild(tr);if(st.open[r.id])B.appendChild(detailRow(r));});}
-function detailRow(r){var tr=el('tr','det'),td=el('td');td.colSpan=6;var g=el('div','detail');
+  tr.onclick=function(){st.open[r.id]=!st.open[r.id];table();};tr.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();tr.onclick();}};return tr;}
+function table(){var G=$('groups');G.textContent='';var all=items().filter(function(r){return match(r);});
+ $('count').textContent=all.length+' of '+items().length+' actions'+(st.co?' · '+nm(st.co):'');var shown=0;
+ (st.co?[st.co]:D.companies).forEach(function(c){var R=all.filter(function(r){return r.company===c;}).sort(sorter),T=items().filter(function(r){return r.company===c;});
+  if(!R.length&&!st.co)return;shown++;
+  var sec=el('section','cosec');sec.id='co-'+slug(c);sec.setAttribute('aria-label',nm(c));
+  var hd=el('div','cohd');var h=el('h3');h.append(el('span','ini',(function(w){return (w.length>1?w[0].charAt(0)+w[1].charAt(0):w[0].slice(0,2)).toUpperCase();})(nm(c).replace(/[^A-Za-z0-9 ]/g,'').split(' ').filter(Boolean))),nm(c));
+  var dn=T.filter(function(r){return r.status==='Completed';}).length,lt=T.filter(late).length,hd2=T.filter(function(r){return r.status==='On Hold';}).length;
+  var meta=el('div','cometa');function st2(n,l,c2){var sp=el('span',c2||null);sp.append(el('b',null,String(n)),' '+l);meta.appendChild(sp);}
+  st2(T.length,T.length===1?'action':'actions');if(lt)st2(lt,'overdue','late');if(hd2)st2(hd2,'on hold','hold');st2(dn,'completed','done');
+  if(T.length){var mb=el('span','minibar');var f=el('span');f.style.width=(dn/T.length*100)+'%';mb.appendChild(f);mb.title=Math.round(dn/T.length*100)+'% completed';meta.appendChild(mb);}
+  if(!st.co){var tl=el('button','toplink','Only this company');tl.type='button';tl.onclick=function(){pickCo(c);};meta.appendChild(tl);}else{var tl2=el('button','toplink','Show all companies');tl2.type='button';tl2.onclick=function(){pickCo(c);};meta.appendChild(tl2);}
+  hd.append(h,meta);sec.appendChild(hd);
+  if(!R.length){sec.appendChild(el('p','empty',T.length?'No '+nm(c)+' actions match the current filters.':'No actions recorded for '+nm(c)+' yet.'));G.appendChild(sec);return;}
+  var w=el('div','tbl'),t=el('table');t.innerHTML=THEAD;var tb=el('tbody');R.forEach(function(r){tb.appendChild(rowEl(r));if(st.open[r.id])tb.appendChild(detailRow(r));});t.appendChild(tb);w.appendChild(t);sec.appendChild(w);
+  t.querySelectorAll('th button[data-sort]').forEach(function(b){b.addEventListener('click',function(){var k=b.dataset.sort;if(st.sort===k)st.dir=-st.dir;else{st.sort=k;st.dir=1;}table();});});
+  G.appendChild(sec);});
+ if(!shown)G.appendChild(el('p','empty','No actions match these filters.'));}
+function detailRow(r){var tr=el('tr','det'),td=el('td');td.colSpan=5;var g=el('div','detail');
  function blk(h,v){var d=el('div');d.append(el('h4',null,h),el('p',null,v||'—'));return d;}
  g.append(blk('Notes',r.notes),blk('Next step',r.next),blk('Dates','Raised: '+fmt(r.raised)+'\nDue: '+fmt(r.due)+(r.completedAt?'\nCompleted: '+fmt(r.completedAt):'')));
  var h=el('div');h.appendChild(el('h4',null,'History'));if(r.history&&r.history.length){var ul=el('ul','hist');r.history.slice(-8).reverse().forEach(function(x){ul.appendChild(el('li',null,fmt(x.at.slice(0,10))+' · '+(x.by||'')+' · '+x.what));});h.appendChild(ul);}else h.appendChild(el('p','note','No changes since the Excel import.'));g.appendChild(h);
@@ -413,16 +451,14 @@ function exportX(){if(!window.XLSX){toast('The Excel writer did not load.');retu
  var ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:12},{wch:60},{wch:12},{wch:12},{wch:34},{wch:60},{wch:50},{wch:10},{wch:12}];var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Action Tracker');XLSX.writeFile(wb,'Growth Office Tracker - '+today()+'.xlsx');}
 // wire
 $('q').addEventListener('input',function(){st.q=this.value.trim();table();});
-$('f-co').addEventListener('change',function(){st.co=this.value;render();});
 $('f-poc').addEventListener('change',function(){st.poc=this.value;render();});
 $('f-clear').addEventListener('click',function(){st.co=st.poc=st.status=st.pri=st.gap=st.q='';$('q').value='';render();});
-document.querySelectorAll('th button[data-sort]').forEach(function(b){b.addEventListener('click',function(){var k=b.dataset.sort;if(st.sort===k)st.dir=-st.dir;else{st.sort=k;st.dir=1;}table();});});
 $('b-edit').addEventListener('click',connectDlg);$('b-add').addEventListener('click',function(){editDlg(null);});$('b-import').addEventListener('click',function(){$('xfile').click();});$('b-export').addEventListener('click',exportX);
 async function boot(){var m=/[#&]k=([A-Za-z0-9_-]+)/.exec(location.hash);
  if(!m){$('gate').querySelector('h2').textContent='Private link needed';$('gate-msg').textContent='This tracker opens only from its full private link. Ask the Growth Office for the link.';return;}
  try{KEY=await crypto.subtle.importKey('raw',b64u(m[1]),'AES-GCM',false,['encrypt','decrypt']);ed=lsGet();
   try{D=await fetchRemote();}catch(e){if(ed){ed=null;D=await fetchRemote();}else throw e;}
-  $('gate').hidden=true;['hbar','kpis','row2','reg','gapsec','foot'].forEach(function(id){$(id).hidden=false;});render();
+  $('gate').hidden=true;['hbar','conav','kpis','row2','reg','gapsec','foot'].forEach(function(id){$(id).hidden=false;});render();
  }catch(e){$('gate').querySelector('h2').textContent='This link could not open the tracker';$('gate-msg').textContent='The key in the link does not match the data, or the data could not be loaded. Check that you copied the full link.';}}
 boot();
 })();
