@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
-<title>Growth Office Action Tracker</title>
+<title>Growth Office PMO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap">
@@ -245,7 +245,7 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
 @media (max-width:520px){.gi{--S:min(88vw,58vh)}.gi-t{border-radius:10px;padding:6px 8px}.gi-words{gap:6px 10px}.gi-words span{letter-spacing:.18em}}
 @media (prefers-reduced-motion:reduce){.gi *,.gi::after{animation-duration:.01s!important;animation-delay:0s!important}.gi-ring .r2{animation:none;opacity:.6}}
 </style>
-<div class="gi" id="gi" data-cap="Growth Office · Action Tracker" role="presentation" aria-hidden="true">
+<div class="gi" id="gi" data-cap="Growth Office · PMO" role="presentation" aria-hidden="true">
  <div class="gi-stage">
   <svg class="gi-ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="r1" cx="50" cy="50" r="41" pathLength="1200"></circle><circle class="r2" cx="50" cy="50" r="47.5"></circle></svg>
   <div class="gi-orb" id="gi-orb"></div>
@@ -272,7 +272,7 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
  <div class="wrap">
   <div class="brand">
    <span class="eyebrow">Mithaquna Group · Growth Office</span>
-   <h1>Action Tracker</h1>
+   <h1>PMO</h1>
    <span class="upd" id="upd"></span>
   </div>
   <div class="hbar" id="hbar" hidden>
@@ -322,7 +322,7 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
     <ul>
      <li>Overdue means the due date has passed (Riyadh date) and the action is not completed. "TBC" and blank due dates never count as overdue.</li>
      <li>Data came from the Growth Office Excel tracker (Action Tracker sheet). Rows without a company label above them belong to the company label below them in the sheet.</li>
-     <li>Edit: click Edit (no password), then click any action to change it, or add new ones. Changes save instantly in your browser and are included in Export Excel straight away. Use "Share with team" to publish them so everyone sees them.</li><li>Export Excel gives a Summary sheet (totals update if you edit the Action Tracker sheet in Excel), the full Action Tracker with filters, and one sheet per company.</li>
+     <li>Edit: click Edit (no password), then click any action to change it, or add new ones. Changes save instantly in your browser and are included in Export Excel straight away. Use "Share with team" to publish them so everyone sees them.</li><li>Export Excel gives a Summary sheet (totals update if you edit the PMO sheet in Excel), the full PMO register with filters, and one sheet per company.</li>
      <li>Import Excel (in edit mode): upload a newer version of the tracker, including one exported from here. Matching actions (same company and action title) are updated, new ones are added, and nothing is deleted.</li>
      <li>The data is encrypted. Only people with the full private link can read it.</li>
     </ul>
@@ -541,7 +541,7 @@ function norm(s){return String(s==null?'':s).replace(/\s+/g,' ').trim();}
 function xd(v){if(v instanceof Date&&!isNaN(v))return new Date(v.getTime()-v.getTimezoneOffset()*6e4).toISOString().slice(0,10);if(typeof v==='number'&&window.XLSX){var o=XLSX.SSF.parse_date_code(v);if(o)return o.y+'-'+String(o.m).padStart(2,'0')+'-'+String(o.d).padStart(2,'0');}return norm(v);}
 function keyOf(c,a){return (norm(c).toUpperCase()+'|'+norm(a)).toLowerCase();}
 async function sha1(s){var b=await crypto.subtle.digest('SHA-1',new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0');}).join('').slice(0,10);}
-async function parseX(buf){var wb=XLSX.read(buf,{type:'array',cellDates:true});var ws=wb.Sheets['Action Tracker']||wb.Sheets[wb.SheetNames[0]];var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+async function parseX(buf){var wb=XLSX.read(buf,{type:'array',cellDates:true});var ws=wb.Sheets['PMO']||wb.Sheets['Action Tracker']||wb.Sheets[wb.SheetNames[0]];var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
  var h=rows.findIndex(function(r){return norm(r[0]).toLowerCase()==='company'&&/action/i.test(norm(r[1]));});if(h<0)throw new Error('Could not find the "Company | Action Item" header row.');
  var body=rows.slice(h+1).filter(function(r){return r.some(function(c){return norm(c)!=='';});});var first='';for(var i=0;i<body.length;i++){if(norm(body[i][0])){first=norm(body[i][0]).toUpperCase();break;}}
  var cur='',out=[],P={high:'High',medium:'Medium',low:'Low'},S={'in progress':'In Progress','on hold':'On Hold','completed':'Completed','open':'Open','':'Open'};
@@ -591,16 +591,16 @@ async function exportX(){
  var last=4+R.length;
  var sm=wb.addWorksheet('Summary',{properties:{tabColor:{argb:'FF17202C'}},views:[{showGridLines:false}]});
  // 1. Action Tracker (master; Import Excel reads this sheet)
- var at=wb.addWorksheet('Action Tracker',{views:[{state:'frozen',xSplit:2,ySplit:4}],properties:{tabColor:{argb:'FF2F4FD8'}}});
+ var at=wb.addWorksheet('PMO',{views:[{state:'frozen',xSplit:2,ySplit:4}],properties:{tabColor:{argb:'FF2F4FD8'}}});
  at.columns=COLS2.map(function(c){return {width:c[1]};});
- title(at,'Growth Office — Action Tracker','Exported '+stamp+' · '+R.length+' actions · includes every edit made in the dashboard. Filter with the arrows in row 4.',COLS2.length);
+ title(at,'Growth Office — PMO','Exported '+stamp+' · '+R.length+' actions · includes every edit made in the dashboard. Filter with the arrows in row 4.',COLS2.length);
  head(at.getRow(4),COLS2.map(function(c){return c[0];}));
  R.forEach(function(r,i){actionRow(at,5+i,r,true);});
  at.autoFilter={from:{row:4,column:1},to:{row:4+R.length,column:COLS2.length}};
  // 2. Summary (formulas recalc when the Action Tracker sheet is edited in Excel)
  sm.columns=[{width:18},{width:12},{width:13},{width:12},{width:13},{width:12},{width:12},{width:13},{width:13}];
- title(sm,'Growth Office — Summary','Exported '+stamp+'. Numbers update automatically if you edit the Action Tracker sheet.',9);
- var A="'Action Tracker'!",rng=function(col){return A+'$'+col+'$5:$'+col+'$'+last;};
+ title(sm,'Growth Office — Summary','Exported '+stamp+'. Numbers update automatically if you edit the PMO sheet.',9);
+ var A="'PMO'!",rng=function(col){return A+'$'+col+'$5:$'+col+'$'+last;};
  var K=[['Total actions','COUNTA('+rng('B')+')',R.length,'2F4FD8'],['In progress','COUNTIF('+rng('I')+',"In Progress")',R.filter(function(r){return r.status==='In Progress';}).length,'2F4FD8'],['High priority','COUNTIFS('+rng('H')+',"High",'+rng('I')+',"<>Completed")',R.filter(function(r){return r.priority==='High'&&r.status!=='Completed';}).length,'B7791F'],['Overdue','COUNT('+rng('J')+')',R.filter(late).length,'C2352F'],['Completed','COUNTIF('+rng('I')+',"Completed")',R.filter(function(r){return r.status==='Completed';}).length,'2E7D52'],['Not started','COUNTIF('+rng('I')+',"Open")',R.filter(function(r){return r.status==='Open';}).length,'6B7385']];
  K.forEach(function(k,i){var c1=sm.getCell(4,i+2),c2=sm.getCell(5,i+2);c1.value=k[0];c1.font={name:F,size:9,bold:true,color:{argb:'FF5C6677'}};c1.alignment={horizontal:'center',wrapText:true};c1.border={top:{style:'medium',color:{argb:'FF'+k[3]}}};
   c2.value={formula:k[1],result:k[2]};c2.font={name:F,size:20,bold:true,color:{argb:'FF'+k[3]}};c2.alignment={horizontal:'center'};});
@@ -631,7 +631,7 @@ async function exportX(){
   head(ws.getRow(4),COLS2.slice(1).map(function(c){return c[0];}));T.forEach(function(r,i){actionRow(ws,5+i,r,false);});
   ws.autoFilter={from:{row:4,column:1},to:{row:4+T.length,column:COLS2.length-1}};});
  wb.views=[{activeTab:0}];
- var buf=await wb.xlsx.writeBuffer();var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Growth Office Tracker - '+today()+'.xlsx';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);
+ var buf=await wb.xlsx.writeBuffer();var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Growth Office PMO - '+today()+'.xlsx';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);
  toast('Excel downloaded'+(ops.length?' (includes your '+ops.length+' edit'+(ops.length===1?'':'s')+')':'')+'.');}
 // wire
 $('q').addEventListener('input',function(){st.q=this.value.trim();table();});
