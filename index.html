@@ -194,10 +194,10 @@ footer ul{margin:8px 0 0;padding-inline-start:18px;display:grid;gap:4px}
 .pend b{color:var(--hold)}
 tr.row.edit-on:hover td{background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
 tr.row.edit-on td.ac .t::after{content:" ✎";color:var(--accent);font-weight:400}
-.cologo{height:36px;min-width:36px;max-width:132px;padding:4px 9px;background:#fff;border:1px solid var(--line);border-radius:9px;display:inline-grid;place-items:center;flex:0 0 auto}
-.cologo img{max-height:26px;max-width:112px;display:block}
-.cologo.dark{padding:0;background:#0B0F1E;border-color:#0B0F1E;overflow:hidden;width:96px}
-.cologo.dark img{max-height:none;max-width:none;width:100%;height:36px;object-fit:cover}
+.cologo{height:50px;width:150px;padding:8px 11px;grid-template-columns:minmax(0,1fr);background:#fff;border:1px solid var(--line);border-radius:10px;display:inline-grid;place-items:center;flex:0 0 auto}
+.cologo img{max-height:34px;max-width:100%;min-width:0;display:block;justify-self:center}
+.cologo.dark{padding:0;background:#0B0F1E;border-color:#0B0F1E;overflow:hidden;width:150px}
+.cologo.dark img{max-height:none;max-width:none;width:100%;height:50px;object-fit:cover}
 mark{background:#FFE58A;color:#111;border-radius:2px}
 @media (prefers-reduced-motion:no-preference){.panel,.kpi{transition:border-color .15s}}
 @media print{.conav,.toplink,header.band .hbar,.filters,.row-acts,.btn,footer details{display:none!important}header.band{background:none;color:#000}header.band::after{display:none}.bandlogo{filter:brightness(.55)}.brand .upd,.eyebrow{color:#333}body{background:#fff;color:#000}.panel,.kpi,.tbl{box-shadow:none}table{min-width:0}}
@@ -224,9 +224,10 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
 .gi-core img{width:100%;height:auto;display:block}
 .gi-orb{position:absolute;left:50%;top:50%;width:0;height:0}
 .gi-t{--a:0deg;--r:calc(var(--S)*.41);position:absolute;left:0;top:0;width:calc(var(--S)*.235);height:calc(var(--S)*.135);margin:calc(var(--S)*-.0675) 0 0 calc(var(--S)*-.1175);
- background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.12),0 12px 30px rgba(0,0,0,.28);display:grid;place-items:center;padding:10px 12px;
+ background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.12),0 12px 30px rgba(0,0,0,.28);display:grid;place-items:center;padding:7% 8%;
  transform:rotate(var(--a)) translate(0) rotate(calc(-1*var(--a))) scale(.3);opacity:0;animation:gi-out .9s cubic-bezier(.2,.9,.25,1.15) forwards;animation-delay:calc(1.1s + var(--i)*.16s)}
-.gi-t img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.gi-t{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.gi-t img{max-width:100%;max-height:100%;min-width:0;display:block;justify-self:center;align-self:center}
 .gi-t.dark{background:transparent;padding:0;overflow:hidden}
 .gi-t.dark img{width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;border-radius:inherit}
 .gi-words{position:absolute;left:50%;top:calc(44% + var(--S)*.5 + 26px);transform:translateX(-50%);display:flex;justify-content:center;align-items:center;gap:8px 18px;width:max-content;max-width:96vw}
@@ -273,7 +274,7 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
  if(/[?&]nointro\b/.test(location.search)){gi.remove();var c=document.getElementById('gi-css');if(c)c.remove();return;}
  gi.querySelector('#gi-cap').textContent=gi.getAttribute('data-cap')||document.documentElement.getAttribute('data-gi-cap')||'';
  var L=[['midwam','Midwam'],['koushan','Koushan'],['tasheel','Tasheel'],['knkt_tile','KNKT',1],['albadr','Al Badr Fayez'],['entergame','EnterGame'],['firstserve','First Serve Courts']];
- var orb=gi.querySelector('#gi-orb');L.forEach(function(x,i){var t=document.createElement('div');t.className='gi-t'+(x[2]?' dark':'');t.style.setProperty('--a',(-90+i*360/L.length)+'deg');t.style.setProperty('--i',i);var im=new Image();im.src='logos/'+x[0]+'.webp';im.alt='';im.decoding='async';t.appendChild(im);orb.appendChild(t);});
+ var orb=gi.querySelector('#gi-orb');L.forEach(function(x,i){var t=document.createElement('div');t.className='gi-t'+(x[2]?' dark':'');t.style.setProperty('--a',(-90+i*360/L.length)+'deg');t.style.setProperty('--i',i);var im=new Image();im.alt='';im.decoding='async';if(!x[2])im.onload=function(){var a=im.naturalWidth/im.naturalHeight,R=1.95,w=Math.min(1,Math.sqrt(.6*a/R),a/R);im.style.width=(w*100).toFixed(1)+'%';im.style.height='auto';};im.src='logos/'+x[0]+'.webp';t.appendChild(im);orb.appendChild(t);});
  var done=false;function close(){if(done)return;done=true;gi.classList.add('out');document.documentElement.style.overflow='';setTimeout(function(){gi.remove();var c=document.getElementById('gi-css');if(c)c.remove();},800);}
  document.documentElement.style.overflow='hidden';
  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -297,7 +298,7 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
  </div>
 </header>
 <nav class="conav" id="conav" aria-label="Companies" hidden><div class="wrap"><div class="conav-in" id="conav-in"></div></div></nav>
-<div class="editbar" id="editbar" hidden><div class="wrap"><span><b>Edit mode is on.</b> Click any action to change it.</span><button class="btn sm" id="e-add" type="button">Add action</button><button class="btn sm ghost" id="e-import" type="button">Import Excel</button><span class="sp"></span><label class="pend">Your name <input id="e-name" type="text" placeholder="optional" autocomplete="name"></label><span class="pend" id="e-pend"></span><button class="btn sm ghost" id="e-share" type="button">Share with team</button><button class="btn sm" id="e-done" type="button">Done editing</button></div></div>
+<div class="editbar" id="editbar" hidden><div class="wrap"><span><b>Edit mode is on.</b> Click any action to change it.</span><button class="btn sm" id="e-add" type="button">Add action</button><button class="btn sm ghost" id="e-import" type="button">Import Excel</button><span class="sp"></span><button class="btn sm" id="e-done" type="button">Done editing</button></div></div>
 <main>
  <div class="wrap" id="app">
   <div class="gate" id="gate"><h2>Loading the tracker…</h2><p class="note" id="gate-msg">Opening the private link.</p></div>
@@ -358,7 +359,8 @@ var KEY=null, D=null, R0=null, sha=null, ed=null, ops=[], EDIT=false, LOC='got-l
 var NAMES={'MITHAQUNA':'Mithaquna','KOUSHAN':'Koushan','TASHEEL':'Tasheel','MIDWAM':'Midwam','ALBADR':'Al Badr','KNKT':'KNKT','3RD LINE':'3rd Line','ENTERGAME':'EnterGame','ZFP':'ZFP','SLFE':'SLFE','FIRST SERVE':'First Serve'};
 var HIDE_CO=['ZFP','SLFE']; /* Harith 23 Nov: not part of the Growth Office tracker */
 var LOGO={'MITHAQUNA':'mithaquna','MIDWAM':'midwam','KOUSHAN':'koushan','TASHEEL':'tasheel','KNKT':'knkt','ENTERGAME':'entergame','ALBADR':'albadr','FIRST SERVE':'firstserve'};
-function logoEl(c){var f=LOGO[c];if(!f)return null;var b=el('span','cologo'+(f==='knkt'?' dark':''));var im=new Image();im.src='logos/'+f+'.webp';im.alt=nm(c)+' logo';im.decoding='async';b.appendChild(im);return b;}
+function logoEl(c){var f=LOGO[c];if(!f)return null;var b=el('span','cologo'+(f==='knkt'?' dark':''));var im=new Image();im.alt=nm(c)+' logo';im.decoding='async';if(f!=='knkt')im.onload=function(){fitLogo(im,128/34,.62);};im.src='logos/'+f+'.webp';b.appendChild(im);return b;}
+function fitLogo(im,R,k){var a=im.naturalWidth/im.naturalHeight;if(!a)return;var w=Math.min(1,Math.sqrt(k*a/R),a/R);im.style.width=(w*100).toFixed(1)+'%';im.style.height='auto';}
 var REV={};Object.keys(NAMES).forEach(function(k){REV[NAMES[k].toLowerCase()]=k;});
 function nm(c){return NAMES[c]||String(c||'').replace(/\w\S*/g,function(w){return w.charAt(0)+w.slice(1).toLowerCase();});}
 function slug(c){return String(c).toLowerCase().replace(/[^a-z0-9]+/g,'-');}
@@ -385,7 +387,15 @@ function sKey(r){return late(r)?'late':({'In Progress':'prog','On Hold':'hold','
 async function decrypt(e){var b=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64u(e.iv)},KEY,b64u(e.ct));return JSON.parse(new TextDecoder().decode(b));}
 async function encrypt(obj){var iv=crypto.getRandomValues(new Uint8Array(12));var ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},KEY,new TextEncoder().encode(JSON.stringify(obj))));return JSON.stringify({v:1,iv:u2b(iv),ct:u2b(ct)});}
 // remote
-function api(){return 'https://api.github.com/repos/'+REPO+'/contents/'+FILE;}
+function api(f){return 'https://api.github.com/repos/'+REPO+'/contents/'+(f||FILE);}
+var EDKEY='editor.enc.json';
+async function loadSharedKey(){try{var r=await fetch(EDKEY+'?nc='+Date.now(),{cache:'no-store'});if(!r.ok)return null;var o=await decrypt(await r.json());return o&&o.token?{name:'Team',token:o.token,shared:true}:null;}catch(e){return null;}}
+async function saveSharedKey(token){var h={Authorization:'Bearer '+token,Accept:'application/vnd.github+json'};var cur=await fetch(api(EDKEY)+'?ref=main',{cache:'no-store',headers:h});var csha=cur.ok?(await cur.json()).sha:undefined;
+ var body={message:'Turn on shared editing for the private link',content:btoa(await encrypt({token:token,at:new Date().toISOString()})),branch:'main'};if(csha)body.sha=csha;
+ var r=await fetch(api(EDKEY),{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},h),body:JSON.stringify(body)});if(!r.ok)throw new Error('Could not save the shared key ('+r.status+').');}
+// keep everyone in sync: pull the latest shared data every 30 s while the page is open
+var SYNC=null;async function syncNow(quiet){if(!R0)return false;try{var fresh=await fetchRemote();if(fresh&&fresh.updated!==R0.updated){R0=fresh;D=applyOps(R0,ops);if($('scrim').hidden)render();if(!quiet)toast('Updated with the latest team changes.');return true;}}catch(e){}return false;}
+function startSync(){clearInterval(SYNC);SYNC=setInterval(function(){if(document.visibilityState==='visible'&&$('scrim').hidden)syncNow();},ed&&ed.token?30000:60000);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')syncNow(true);});}
 async function fetchRemote(){
  if(ed&&ed.token){var r=await fetch(api()+'?ref=main',{cache:'no-store',headers:{Authorization:'Bearer '+ed.token,Accept:'application/vnd.github+json'}});if(!r.ok)throw new Error('GitHub said '+r.status);var j=await r.json();sha=j.sha;var txt=j.content?atob(j.content.replace(/\n/g,'')):await (await fetch(api()+'?ref=main',{cache:'no-store',headers:{Authorization:'Bearer '+ed.token,Accept:'application/vnd.github.raw+json'}})).text();return decrypt(JSON.parse(txt));}
  var e=await (await fetch(FILE+'?nc='+Date.now(),{cache:'no-store'})).json();return decrypt(e);}
@@ -413,10 +423,10 @@ function applyOps(base,list){var d=clone(base);list.forEach(function(o){
  if(list.length)d.localEdits=list.length;return d;}
 async function commit(newOps,msg){
  if(ed&&ed.token){toast('Saving…');try{await pushRemote(function(fresh){var x=applyOps(fresh,newOps);fresh.items=x.items;fresh.companies=x.companies;},msg);toast('Saved for everyone.');}catch(e){toast(e.message);}return;}
- ops=ops.concat(newOps);saveOps();D=applyOps(R0,ops);render();toast('Saved. Export Excel now includes this change.');}
+ ops=ops.concat(newOps);saveOps();D=applyOps(R0,ops);render();toast(ed&&ed.token?'Saved for everyone.':'Saved on this device. Export Excel includes it.');}
 async function publishOps(){if(!ops.length)return;var n=ops.length,list=ops.slice();await pushRemote(function(fresh){var x=applyOps(fresh,list);fresh.items=x.items;fresh.companies=x.companies;},'Published '+n+' edits');ops=[];saveOps();D=applyOps(R0,ops);render();}
 function setEdit(on){EDIT=on;try{if(on)localStorage.setItem('got-editmode','1');else localStorage.removeItem('got-editmode');}catch(e){}render();}
-function isEditing(){return EDIT||!!(ed&&ed.token);}
+function isEditing(){return EDIT;}
 // derived
 function items(){return (D&&D.items)||[];}
 function owners(){var m={};items().forEach(function(r){splitPoc(r.poc).forEach(function(p){m[p]=(m[p]||0)+1;});});return Object.keys(m).sort(function(a,b){return a.localeCompare(b);});}
@@ -442,7 +452,6 @@ function render(){
  kpis();attention();cobars();filters();conav();table();gaps();
  $('reg-acts').hidden=true;$('editbar').hidden=!EDIT;
  $('b-edit').textContent=EDIT?'Editing…':'Edit';$('b-edit').classList.toggle('on',EDIT);
- $('e-pend').textContent='';if(ops.length){$('e-pend').append(el('b',null,String(ops.length)),' change'+(ops.length===1?'':'s')+' saved in this browser');}else if(ed&&ed.token){$('e-pend').textContent='Changes save for the whole team';}else{$('e-pend').textContent='No changes yet';}
  if(ops.length&&!EDIT){$('upd').appendChild(document.createTextNode(' · '));var pb=el('b',null,ops.length+' local edit'+(ops.length===1?'':'s'));pb.style.color='#F2C26B';$('upd').appendChild(pb);}}
 function kpis(){var I=items(),K=$('kpis');K.textContent='';
  var defs=[['','Total actions',I.length,'all companies','var(--accent)'],['In Progress','In progress',I.filter(function(r){return r.status==='In Progress';}).length,'being worked on','var(--prog)'],['pri:High','High priority',I.filter(function(r){return r.priority==='High'&&r.status!=='Completed';}).length,'open, not completed','var(--hold)'],['late','Overdue',I.filter(late).length,'past due, not done','var(--late)'],['Completed','Completed',I.filter(function(r){return r.status==='Completed';}).length,'closed','var(--done)'],['Open','Not started',I.filter(function(r){return r.status==='Open';}).length,'open, no progress yet','var(--open)']];
@@ -524,16 +533,14 @@ function field(form,label,node,full){var l=el('label',full?'full':null,label);l.
 function inp(v,type){var i=el('input');i.type=type||'text';i.value=v||'';return i;}
 function sel(opts,v){var s=el('select');opts.forEach(function(o){s.appendChild(new Option(o||'—',o));});s.value=v||'';return s;}
 function ta(v){var t=el('textarea');t.value=v||'';return t;}
-function shareDlg(){dlg(function(d){d.appendChild(el('h3',null,'Share edits with the team'));
- if(ed&&ed.token){d.appendChild(el('p',null,'This browser saves straight to the shared tracker'+(ed.name?' as '+ed.name:'')+'.'));var a0=el('div','acts');var off=el('button','btn warn','Stop sharing from this browser');off.type='button';off.onclick=function(){ed=null;lsSet(null);close();render();toast('Shared saving turned off here.');};var ok0=el('button','btn','Done');ok0.type='button';ok0.onclick=close;a0.append(off,ok0);d.appendChild(a0);return;}
- d.appendChild(el('p',null,ops.length?ops.length+' change'+(ops.length===1?' is':'s are')+' saved in this browser and already included in Export Excel. Other people see them once they are published to the shared tracker.':'Your edits are saved in this browser and included in Export Excel. Other people see them once they are published to the shared tracker.'));
- d.appendChild(el('p',null,'To publish from here, enter a GitHub access key once (fine-grained token for the growth-office-tracker repository, Contents: read and write). It stays in this browser only. Or ask Claude to publish your edits.'));
- var f=el('form','form');var tk=field(f,'GitHub access key (optional)',inp('','password'),true);tk.autocomplete='off';d.appendChild(f);
- var msg=el('p','note');d.appendChild(msg);var a=el('div','acts');var c=el('button','btn ghost','Close');c.type='button';c.onclick=close;var s=el('button','btn',ops.length?'Connect and publish':'Connect');s.type='button';
- async function go(){if(!tk.value.trim()){msg.textContent='Enter the access key, or close this window to keep your edits in this browser.';return;}s.disabled=true;msg.textContent='Checking…';var prev=ed;ed={name:who()||'Editor',token:tk.value.trim()};try{R0=await fetchRemote();lsSet(ed);if(ops.length){msg.textContent='Publishing…';await publishOps();}else{D=applyOps(R0,ops);render();}close();toast('Shared with the team.');}catch(err){ed=prev;msg.textContent='Could not connect: '+err.message;s.disabled=false;}}
- f.onsubmit=function(e){e.preventDefault();go();};s.onclick=go;a.append(c,s);
- if(ops.length){var dz=el('button','btn warn','Discard my '+ops.length+' change'+(ops.length===1?'':'s'));dz.type='button';dz.onclick=function(){if(dz.dataset.sure){ops=[];saveOps();D=applyOps(R0,ops);close();render();toast('Your local changes were discarded.');}else{dz.dataset.sure='1';dz.textContent='Click again to discard';}};a.insertBefore(dz,c);}
- d.appendChild(a);});}
+function setupDlg(){dlg(function(d){d.appendChild(el('h3',null,'Turn on editing for everyone with the link'));
+ d.appendChild(el('p',null,'Paste a GitHub access key once (fine-grained token for the growth-office-tracker repository only, Contents: read and write). It is stored encrypted with this private link, so anyone who opens the link can save changes for the whole team. To switch editing off for everyone later, revoke the key on GitHub.'));
+ var f=el('form','form');var tk=field(f,'GitHub access key',inp('','password'),true);tk.autocomplete='off';d.appendChild(f);
+ var msg=el('p','note');d.appendChild(msg);var a=el('div','acts');var c=el('button','btn ghost','Close');c.type='button';c.onclick=close;var sb=el('button','btn','Turn on');sb.type='button';
+ async function go(){var t=tk.value.trim();if(!t){msg.textContent='Paste the access key first.';return;}sb.disabled=true;msg.textContent='Checking…';var prev=ed;ed={name:'Team',token:t,shared:true};
+  try{R0=await fetchRemote();await saveSharedKey(t);if(ops.length){msg.textContent='Publishing your saved changes…';await publishOps();}else{D=applyOps(R0,ops);render();}startSync();close();history.replaceState(null,'',location.pathname+location.hash.replace(/&setup\b/,''));toast('Editing is on for everyone with the link.');}
+  catch(err){ed=prev;msg.textContent='Could not turn it on: '+err.message;sb.disabled=false;}}
+ f.onsubmit=function(e){e.preventDefault();go();};sb.onclick=go;a.append(c,sb);d.appendChild(a);});}
 function diffWhat(old,ch){return Object.keys(ch).filter(function(k){return (old[k]||'')!==(ch[k]||'');}).map(function(k){return k==='status'?'status '+(old[k]||'—')+' → '+ch[k]:k==='due'?'due '+(old[k]||'—')+' → '+(ch[k]||'—'):k==='priority'?'priority '+(old[k]||'—')+' → '+(ch[k]||'—'):k+' updated';}).join(', ');}
 function save(id,ch,msg){var r=items().find(function(x){return x.id===id;});if(!r)return;if(ch.status==='Completed'&&r.status!=='Completed')ch.completedAt=today();if(ch.status&&ch.status!=='Completed'&&r.completedAt)ch.completedAt='';var w=diffWhat(r,ch);if(!w){toast('Nothing changed.');return;}commit([{t:'edit',id:id,ch:ch,at:new Date().toISOString(),by:who()||(ed&&ed.name)||'Editor',what:w}],msg);}
 function editDlg(r){var isNew=!r;r=r||{company:st.co||D.companies[0],action:'',raised:today(),due:'',poc:'',notes:'',next:'',priority:'',status:'Open'};
@@ -581,7 +588,7 @@ var XST={'In Progress':['E3E9FF','2F4FD8'],'On Hold':['FFF1D6','9A6200'],'Comple
 var XPR={'High':'C2352F','Medium':'B7791F','Low':'6B7385'};
 function xdate(s){return isDate(s)?new Date(s+'T00:00:00Z'):(s||'');}
 async function exportX(){
- try{toast('Building the Excel file…');if(!window.ExcelJS)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js');}catch(e){toast(e.message);return;}
+ try{toast('Building the Excel file…');await syncNow(true);if(!window.ExcelJS)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js');}catch(e){toast(e.message);return;}
  var R=items().slice().sort(function(a,b){return D.companies.indexOf(a.company)-D.companies.indexOf(b.company)||(late(b)-late(a))||String(a.due||'9').localeCompare(String(b.due||'9'))||a.action.localeCompare(b.action);});
  var wb=new ExcelJS.Workbook();wb.creator='Growth Office';wb.created=new Date();wb.calcProperties.fullCalcOnLoad=true;
  var INK='17202C',LINE='D9DEE7',F='Calibri',now=new Date(Date.now()+3*3600e3).toISOString(),stamp=fmtD(now.slice(0,10))+' '+now.slice(0,4)+', '+now.slice(11,16)+' Riyadh';
@@ -651,13 +658,15 @@ async function exportX(){
 $('q').addEventListener('input',function(){st.q=this.value.trim();table();});
 $('f-poc').addEventListener('change',function(){st.poc=this.value;render();});
 $('f-clear').addEventListener('click',function(){st.co=st.poc=st.status=st.pri=st.gap=st.q='';$('q').value='';render();});
-$('b-edit').addEventListener('click',function(){setEdit(!EDIT);if(EDIT)toast('Edit mode is on. Click any action to change it.');});$('e-done').addEventListener('click',function(){setEdit(false);});$('e-add').addEventListener('click',function(){editDlg(null);});$('e-import').addEventListener('click',function(){$('xfile').click();});$('e-share').addEventListener('click',shareDlg);$('e-name').addEventListener('change',function(){try{localStorage.setItem('got-name',this.value.trim());}catch(e){}});$('b-add').addEventListener('click',function(){editDlg(null);});$('b-import').addEventListener('click',function(){$('xfile').click();});$('b-export').addEventListener('click',exportX);
+$('b-edit').addEventListener('click',function(){setEdit(!EDIT);if(EDIT)toast('Edit mode is on. Click any action to change it.');});$('e-done').addEventListener('click',function(){setEdit(false);});$('e-add').addEventListener('click',function(){editDlg(null);});$('e-import').addEventListener('click',function(){$('xfile').click();});$('b-add').addEventListener('click',function(){editDlg(null);});$('b-import').addEventListener('click',function(){$('xfile').click();});$('b-export').addEventListener('click',exportX);
 async function boot(){var m=/[#&]k=([A-Za-z0-9_-]+)/.exec(location.hash);
  if(!m){$('gate').querySelector('h2').textContent='Private link needed';$('gate-msg').textContent='This tracker opens only from its full private link. Ask the Growth Office for the link.';return;}
- try{KEY=await crypto.subtle.importKey('raw',b64u(m[1]),'AES-GCM',false,['encrypt','decrypt']);ed=lsGet();
+ try{KEY=await crypto.subtle.importKey('raw',b64u(m[1]),'AES-GCM',false,['encrypt','decrypt']);ed=(await loadSharedKey())||lsGet();
   try{R0=await fetchRemote();}catch(e){if(ed){ed=null;R0=await fetchRemote();}else throw e;}
-  ops=loadOps();D=applyOps(R0,ops);try{EDIT=localStorage.getItem('got-editmode')==='1';$('e-name').value=who();}catch(e){}
-  $('gate').hidden=true;['hbar','conav','kpis','row2','reg','gapsec','foot'].forEach(function(id){$(id).hidden=false;});render();
+  ops=loadOps();D=applyOps(R0,ops);try{EDIT=localStorage.getItem('got-editmode')==='1';}catch(e){}
+  $('gate').hidden=true;['hbar','conav','kpis','row2','reg','gapsec','foot'].forEach(function(id){$(id).hidden=false;});render();startSync();
+  if(ed&&ed.token&&ops.length){publishOps().then(function(){toast('Your earlier changes are now shared with the team.');}).catch(function(){});}
+  if(/[?&]setup\b/.test(location.search+location.hash.replace('#','&')))setupDlg();
  }catch(e){$('gate').querySelector('h2').textContent='This link could not open the tracker';$('gate-msg').textContent='The key in the link does not match the data, or the data could not be loaded. Check that you copied the full link.';}}
 boot();
 })();
