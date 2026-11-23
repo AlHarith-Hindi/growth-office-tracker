@@ -176,6 +176,17 @@ footer ul{margin:8px 0 0;padding-inline-start:18px;display:grid;gap:4px}
 .cosec th:nth-child(1){width:44%}.cosec th:nth-child(2){width:21%}.cosec th:nth-child(3){width:13%}.cosec th:nth-child(4){width:10%}.cosec th:nth-child(5){width:12%}
 .cosec td.ac{min-width:0}.cosec td.poc{min-width:0}
 .toplink{font-size:12.5px;color:var(--accent);cursor:pointer;background:none;border:0;padding:0}
+/* v3 (23 Nov): open edit mode (no key), local edits, styled Excel export */
+.editbar{position:sticky;top:49px;z-index:19;background:color-mix(in srgb,var(--accent) 12%,var(--panel));border-bottom:1px solid var(--accent)}
+.editbar .wrap{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding-block:8px;font-size:13.5px}
+.editbar b{color:var(--accent)}
+.editbar .sp{flex:1 1 auto}
+.editbar input{padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--panel);font-size:13px;width:150px}
+.btn.sm{padding:5px 11px;font-size:13px}
+.pend{font-size:12.5px;color:var(--muted)}
+.pend b{color:var(--hold)}
+tr.row.edit-on:hover td{background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
+tr.row.edit-on td.ac .t::after{content:" ✎";color:var(--accent);font-weight:400}
 mark{background:#FFE58A;color:#111;border-radius:2px}
 @media (prefers-reduced-motion:no-preference){.panel,.kpi{transition:border-color .15s}}
 @media print{.conav,.toplink,header.band .hbar,.filters,.row-acts,.btn,footer details{display:none!important}header.band{background:none;color:#000}.brand .upd,.eyebrow{color:#333}body{background:#fff;color:#000}.panel,.kpi,.tbl{box-shadow:none}table{min-width:0}}
@@ -197,6 +208,7 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
  </div>
 </header>
 <nav class="conav" id="conav" aria-label="Companies" hidden><div class="wrap"><div class="conav-in" id="conav-in"></div></div></nav>
+<div class="editbar" id="editbar" hidden><div class="wrap"><span><b>Edit mode is on.</b> Click any action to change it.</span><button class="btn sm" id="e-add" type="button">Add action</button><button class="btn sm ghost" id="e-import" type="button">Import Excel</button><span class="sp"></span><label class="pend">Your name <input id="e-name" type="text" placeholder="optional" autocomplete="name"></label><span class="pend" id="e-pend"></span><button class="btn sm ghost" id="e-share" type="button">Share with team</button><button class="btn sm" id="e-done" type="button">Done editing</button></div></div>
 <main>
  <div class="wrap" id="app">
   <div class="gate" id="gate"><h2>Loading the tracker…</h2><p class="note" id="gate-msg">Opening the private link.</p></div>
@@ -235,8 +247,8 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
     <ul>
      <li>Overdue means the due date has passed (Riyadh date) and the action is not completed. "TBC" and blank due dates never count as overdue.</li>
      <li>Data came from the Growth Office Excel tracker (Action Tracker sheet). Rows without a company label above them belong to the company label below them in the sheet.</li>
-     <li>Editors connect once with their GitHub access key; every change is saved for everyone and recorded in the action's history.</li>
-     <li>Import Excel: upload a newer version of the tracker. Matching actions (same company and action title) are updated, new ones are added, and nothing is deleted.</li>
+     <li>Edit: click Edit (no password), then click any action to change it, or add new ones. Changes save instantly in your browser and are included in Export Excel straight away. Use "Share with team" to publish them so everyone sees them.</li><li>Export Excel gives a Summary sheet (totals update if you edit the Action Tracker sheet in Excel), the full Action Tracker with filters, and one sheet per company.</li>
+     <li>Import Excel (in edit mode): upload a newer version of the tracker, including one exported from here. Matching actions (same company and action title) are updated, new ones are added, and nothing is deleted.</li>
      <li>The data is encrypted. Only people with the full private link can read it.</li>
     </ul>
     <p id="src"></p>
@@ -253,8 +265,9 @@ mark{background:#FFE58A;color:#111;border-radius:2px}
 'use strict';
 var REPO='AlHarith-Hindi/growth-office-tracker', FILE='data.enc.json', LS='got-editor';
 var STATUSES=['Open','In Progress','On Hold','Completed'], PRIS=['High','Medium','Low'];
-var KEY=null, D=null, sha=null, ed=null;
+var KEY=null, D=null, R0=null, sha=null, ed=null, ops=[], EDIT=false, LOC='got-local-v1';
 var NAMES={'MITHAQUNA':'Mithaquna','KOUSHAN':'Koushan','TASHEEL':'Tasheel','MIDWAM':'Midwam','ALBADR':'Al Badr','KNKT':'KNKT','3RD LINE':'3rd Line','ENTERGAME':'EnterGame','ZFP':'ZFP','SLFE':'SLFE','FIRST SERVE':'First Serve'};
+var REV={};Object.keys(NAMES).forEach(function(k){REV[NAMES[k].toLowerCase()]=k;});
 function nm(c){return NAMES[c]||String(c||'').replace(/\w\S*/g,function(w){return w.charAt(0)+w.slice(1).toLowerCase();});}
 function slug(c){return String(c).toLowerCase().replace(/[^a-z0-9]+/g,'-');}
 var st={co:'',poc:'',status:'',pri:'',late:false,q:'',gap:'',sort:'due',dir:1,open:{}};
@@ -291,10 +304,26 @@ async function pushRemote(mutate,msg){
   fresh.log=[{at:fresh.updated,by:ed.name||'Editor',what:msg}].concat(fresh.log||[]).slice(0,200);
   var body=JSON.stringify({message:'Tracker: '+msg.slice(0,90),content:btoa(await encrypt(fresh)),sha:sha,branch:'main'});
   var r=await fetch(api(),{method:'PUT',headers:{Authorization:'Bearer '+ed.token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:body});
-  if(r.ok){var j=await r.json();sha=j.content&&j.content.sha;D=fresh;render();return;}
+  if(r.ok){var j=await r.json();sha=j.content&&j.content.sha;R0=fresh;D=applyOps(R0,ops);render();return;}
   if(r.status!==409&&r.status!==422)throw new Error('Save failed ('+r.status+'). Check the access key.');
  }
  throw new Error('Someone else saved at the same moment. Try again.');}
+// local edits (no key needed): every change is an op kept in this browser and applied on top of the shared data
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function loadOps(){try{var v=JSON.parse(localStorage.getItem(LOC)||'null');return v&&Array.isArray(v.ops)?v.ops:[];}catch(e){return [];}}
+function saveOps(){try{if(ops.length)localStorage.setItem(LOC,JSON.stringify({ops:ops}));else localStorage.removeItem(LOC);}catch(e){}}
+function who(){try{return localStorage.getItem('got-name')||'';}catch(e){return '';}}
+function applyOps(base,list){var d=clone(base);list.forEach(function(o){
+ if(o.t==='edit'){var r=d.items.find(function(x){return x.id===o.id;});if(!r)return;var w=diffWhat(r,o.ch);Object.assign(r,o.ch);r.history=(r.history||[]).concat([{at:o.at,by:o.by,what:o.what||w||'edited'}]);if(r.company&&d.companies.indexOf(r.company)<0)d.companies.push(r.company);}
+ else if(o.t==='add'){if(!d.items.some(function(x){return x.id===o.item.id;})){d.items.push(clone(o.item));if(d.companies.indexOf(o.item.company)<0)d.companies.push(o.item.company);}}
+ else if(o.t==='rm'){d.items=d.items.filter(function(x){return x.id!==o.id;});}});
+ if(list.length)d.localEdits=list.length;return d;}
+async function commit(newOps,msg){
+ if(ed&&ed.token){toast('Saving…');try{await pushRemote(function(fresh){var x=applyOps(fresh,newOps);fresh.items=x.items;fresh.companies=x.companies;},msg);toast('Saved for everyone.');}catch(e){toast(e.message);}return;}
+ ops=ops.concat(newOps);saveOps();D=applyOps(R0,ops);render();toast('Saved. Export Excel now includes this change.');}
+async function publishOps(){if(!ops.length)return;var n=ops.length,list=ops.slice();await pushRemote(function(fresh){var x=applyOps(fresh,list);fresh.items=x.items;fresh.companies=x.companies;},'Published '+n+' edits');ops=[];saveOps();D=applyOps(R0,ops);render();}
+function setEdit(on){EDIT=on;try{if(on)localStorage.setItem('got-editmode','1');else localStorage.removeItem('got-editmode');}catch(e){}render();}
+function isEditing(){return EDIT||!!(ed&&ed.token);}
 // derived
 function items(){return (D&&D.items)||[];}
 function owners(){var m={};items().forEach(function(r){splitPoc(r.poc).forEach(function(p){m[p]=(m[p]||0)+1;});});return Object.keys(m).sort(function(a,b){return a.localeCompare(b);});}
@@ -316,11 +345,13 @@ function render(){
  $('upd').textContent='Updated '+fmtD(ud.slice(0,10))+' '+ud.slice(11,16)+' Riyadh · '+items().length+' actions across '+D.companies.length+' companies';
  $('src').textContent='Source: '+(D.source||'—')+'.';
  kpis();attention();cobars();filters();conav();table();gaps();
- $('reg-acts').hidden=!(ed&&ed.token);
- $('b-edit').textContent=ed&&ed.token?'Editing as '+(ed.name||'editor'):'Edit';$('b-edit').classList.toggle('on',!!(ed&&ed.token));}
+ $('reg-acts').hidden=true;$('editbar').hidden=!EDIT;
+ $('b-edit').textContent=EDIT?'Editing…':'Edit';$('b-edit').classList.toggle('on',EDIT);
+ $('e-pend').textContent='';if(ops.length){$('e-pend').append(el('b',null,String(ops.length)),' change'+(ops.length===1?'':'s')+' saved in this browser');}else if(ed&&ed.token){$('e-pend').textContent='Changes save for the whole team';}else{$('e-pend').textContent='No changes yet';}
+ if(ops.length&&!EDIT){$('upd').appendChild(document.createTextNode(' · '));var pb=el('b',null,ops.length+' local edit'+(ops.length===1?'':'s'));pb.style.color='#F2C26B';$('upd').appendChild(pb);}}
 function kpis(){var I=items(),K=$('kpis');K.textContent='';
- var defs=[['','Total actions',I.length,'all companies','var(--accent)'],['In Progress','In progress',I.filter(function(r){return r.status==='In Progress';}).length,'being worked on','var(--prog)'],['On Hold','On hold',I.filter(function(r){return r.status==='On Hold';}).length,'paused','var(--hold)'],['late','Overdue',I.filter(late).length,'past due, not done','var(--late)'],['Completed','Completed',I.filter(function(r){return r.status==='Completed';}).length,'closed','var(--done)'],['Open','Not started',I.filter(function(r){return r.status==='Open';}).length,'open, no progress yet','var(--open)']];
- defs.forEach(function(d){var b=el('button','kpi');b.type='button';b.style.setProperty('--c',d[4]);b.setAttribute('aria-pressed',String(st.status===d[0]&&(d[0]!==''||!st.status)&&!!d[0]));b.append(el('span','l',d[1]),el('span','v',String(d[2])),el('span','s',d[3]));if(d[0]==='late'&&d[2])b.querySelector('.v').style.color='var(--late)';b.onclick=function(){st.status=st.status===d[0]?'':d[0];st.gap='';render();$('reg').scrollIntoView({behavior:'smooth',block:'start'});};K.appendChild(b);});}
+ var defs=[['','Total actions',I.length,'all companies','var(--accent)'],['In Progress','In progress',I.filter(function(r){return r.status==='In Progress';}).length,'being worked on','var(--prog)'],['pri:High','High priority',I.filter(function(r){return r.priority==='High'&&r.status!=='Completed';}).length,'open, not completed','var(--hold)'],['late','Overdue',I.filter(late).length,'past due, not done','var(--late)'],['Completed','Completed',I.filter(function(r){return r.status==='Completed';}).length,'closed','var(--done)'],['Open','Not started',I.filter(function(r){return r.status==='Open';}).length,'open, no progress yet','var(--open)']];
+ defs.forEach(function(d){var b=el('button','kpi');b.type='button';b.style.setProperty('--c',d[4]);var isPri=d[0].indexOf('pri:')===0,pv=d[0].slice(4);b.setAttribute('aria-pressed',String(isPri?st.pri===pv:(!!d[0]&&st.status===d[0])));b.append(el('span','l',d[1]),el('span','v',String(d[2])),el('span','s',d[3]));if(d[0]==='late'&&d[2])b.querySelector('.v').style.color='var(--late)';b.onclick=function(){if(isPri){st.pri=st.pri===pv?'':pv;}else{st.status=st.status===d[0]?'':d[0];}st.gap='';render();$('reg').scrollIntoView({behavior:'smooth',block:'start'});};K.appendChild(b);});}
 function attention(){var I=items(),L=$('att');L.textContent='';
  var a=I.filter(late).sort(function(x,y){return x.due.localeCompare(y.due);}).map(function(r){return [r,'late'];});
  var s=I.filter(soon).sort(function(x,y){return x.due.localeCompare(y.due);}).map(function(r){return [r,'soon'];});
@@ -356,13 +387,13 @@ function conav(){var N=$('conav-in');N.textContent='';var I=items();
  var all=btn('All companies',!st.co,function(){st.co='';render();$('reg').scrollIntoView({behavior:'smooth',block:'start'});});all.appendChild(el('span','k',String(I.length)));
  D.companies.forEach(function(c){var R=I.filter(function(r){return r.company===c;}),lt=R.filter(late).length;var b=btn(nm(c),st.co===c,function(){pickCo(c);},R.length?'':'zero');b.appendChild(el('span','k',String(R.length)));if(lt){var d=el('span','dot',String(lt));d.title=lt+' overdue';b.appendChild(d);}});}
 var THEAD='<thead><tr><th><button type="button" data-sort="action">Action</button></th><th>POC / Support</th><th><button type="button" data-sort="due">Due</button></th><th><button type="button" data-sort="priority">Priority</button></th><th><button type="button" data-sort="status">Status</button></th></tr></thead>';
-function rowEl(r){var tr=el('tr','row'+(r.status==='Completed'?' done':''));tr.id='r-'+r.id;tr.tabIndex=0;tr.setAttribute('aria-expanded',String(!!st.open[r.id]));
+function rowEl(r){var tr=el('tr','row'+(r.status==='Completed'?' done':'')+(isEditing()?' edit-on':''));tr.id='r-'+r.id;tr.tabIndex=0;tr.setAttribute('aria-expanded',String(!!st.open[r.id]));
   var ac=el('td','ac');var t=el('div','t');hl(t,r.action);ac.appendChild(t);var x=r.next||r.notes;if(x){var xx=el('div','x');hl(xx,(r.next?'Next: ':'')+x);ac.appendChild(xx);}tr.appendChild(ac);
   var pc=el('td','poc');hl(pc,r.poc||'—');if(!r.poc)pc.style.color='var(--muted)';tr.appendChild(pc);
   var dd=el('td','d');if(isDate(r.due)){dd.append(fmt(r.due));if(late(r)){dd.className+=' due-late';dd.appendChild(el('span','tag',lateBy(r)+' days overdue'));}else if(soon(r)){dd.className+=' due-soon';dd.appendChild(el('span','tag','in '+days(today(),r.due)+' days'));}}else{dd.textContent=r.due||'—';dd.style.color='var(--muted)';}tr.appendChild(dd);
   var pr=el('td');if(r.priority)pr.appendChild(el('span','pill p-'+r.priority,r.priority));else pr.appendChild(el('span','note','—'));tr.appendChild(pr);
   var sk=sKey(r);var sc=el('td');sc.appendChild(el('span','pill s-'+sk,late(r)?'Overdue':r.status));if(late(r)&&r.status!=='In Progress'){sc.appendChild(el('span','tag note',r.status));}tr.appendChild(sc);
-  tr.onclick=function(){st.open[r.id]=!st.open[r.id];table();};tr.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();tr.onclick();}};return tr;}
+  tr.onclick=function(){if(isEditing()){editDlg(r);return;}st.open[r.id]=!st.open[r.id];table();};tr.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();tr.onclick();}};return tr;}
 function table(){var G=$('groups');G.textContent='';var all=items().filter(function(r){return match(r);});
  $('count').textContent=all.length+' of '+items().length+' actions'+(st.co?' · '+nm(st.co):'');var shown=0;
  (st.co?[st.co]:D.companies).forEach(function(c){var R=all.filter(function(r){return r.company===c;}).sort(sorter),T=items().filter(function(r){return r.company===c;});
@@ -384,7 +415,7 @@ function detailRow(r){var tr=el('tr','det'),td=el('td');td.colSpan=5;var g=el('d
  function blk(h,v){var d=el('div');d.append(el('h4',null,h),el('p',null,v||'—'));return d;}
  g.append(blk('Notes',r.notes),blk('Next step',r.next),blk('Dates','Raised: '+fmt(r.raised)+'\nDue: '+fmt(r.due)+(r.completedAt?'\nCompleted: '+fmt(r.completedAt):'')));
  var h=el('div');h.appendChild(el('h4',null,'History'));if(r.history&&r.history.length){var ul=el('ul','hist');r.history.slice(-8).reverse().forEach(function(x){ul.appendChild(el('li',null,fmt(x.at.slice(0,10))+' · '+(x.by||'')+' · '+x.what));});h.appendChild(ul);}else h.appendChild(el('p','note','No changes since the Excel import.'));g.appendChild(h);
- td.appendChild(g);if(ed&&ed.token){var a=el('div','row-acts');var b1=el('button','btn','Edit action');b1.type='button';b1.onclick=function(e){e.stopPropagation();editDlg(r);};a.appendChild(b1);
+ td.appendChild(g);if(isEditing()){var a=el('div','row-acts');var b1=el('button','btn','Edit action');b1.type='button';b1.onclick=function(e){e.stopPropagation();editDlg(r);};a.appendChild(b1);
   if(r.status!=='Completed'){var b2=el('button','btn ghost','Mark completed');b2.type='button';b2.onclick=function(e){e.stopPropagation();save(r.id,{status:'Completed'},'Marked completed: '+r.action);};a.appendChild(b2);}td.appendChild(a);}
  tr.appendChild(td);return tr;}
 function gaps(){var G=$('gaps');G.textContent='';var I=items();GAPS.forEach(function(g){var n=I.filter(gapFn(g[0])).length;var b=el('button','gap');b.type='button';b.append(el('span','v',String(n)),el('span','l',g[1]));if(st.gap===g[0])b.style.borderColor='var(--accent)';b.onclick=function(){st.gap=st.gap===g[0]?'':g[0];render();$('reg').scrollIntoView({behavior:'smooth',block:'start'});};G.appendChild(b);});}
@@ -398,15 +429,18 @@ function field(form,label,node,full){var l=el('label',full?'full':null,label);l.
 function inp(v,type){var i=el('input');i.type=type||'text';i.value=v||'';return i;}
 function sel(opts,v){var s=el('select');opts.forEach(function(o){s.appendChild(new Option(o||'—',o));});s.value=v||'';return s;}
 function ta(v){var t=el('textarea');t.value=v||'';return t;}
-function connectDlg(){dlg(function(d){d.appendChild(el('h3',null,ed&&ed.token?'Editing is on':'Turn on editing'));
- if(ed&&ed.token){d.appendChild(el('p',null,'You are editing as '+(ed.name||'editor')+' in this browser. Changes save for everyone with the link.'));var a=el('div','acts');var off=el('button','btn warn','Turn off editing here');off.type='button';off.onclick=function(){ed=null;lsSet(null);close();render();toast('Editing turned off in this browser.');};var ok=el('button','btn','Done');ok.type='button';ok.onclick=close;a.append(off,ok);d.appendChild(a);return;}
- d.appendChild(el('p',null,'Editors need a GitHub access key for the growth-office-tracker repository (fine-grained token with Contents: read and write). It is kept only in this browser.'));
- var f=el('form','form');var nm=field(f,'Your name (shown in history)',inp(''),false);var tk=field(f,'GitHub access key',inp('','password'),false);tk.autocomplete='off';d.appendChild(f);
- var msg=el('p','note');d.appendChild(msg);var a=el('div','acts');var c=el('button','btn ghost','Cancel');c.type='button';c.onclick=close;var s=el('button','btn','Connect');s.type='submit';
- async function go(){if(!nm.value.trim()||!tk.value.trim()){msg.textContent='Enter your name and the access key.';return;}s.disabled=true;msg.textContent='Checking…';var prev=ed;ed={name:nm.value.trim(),token:tk.value.trim()};try{D=await fetchRemote();lsSet(ed);close();render();toast('Editing is on.');}catch(err){ed=prev;msg.textContent='Could not connect: '+err.message;s.disabled=false;}}
- f.onsubmit=function(e){e.preventDefault();go();};s.type='button';s.onclick=go;a.append(c,s);d.appendChild(a);});}
+function shareDlg(){dlg(function(d){d.appendChild(el('h3',null,'Share edits with the team'));
+ if(ed&&ed.token){d.appendChild(el('p',null,'This browser saves straight to the shared tracker'+(ed.name?' as '+ed.name:'')+'.'));var a0=el('div','acts');var off=el('button','btn warn','Stop sharing from this browser');off.type='button';off.onclick=function(){ed=null;lsSet(null);close();render();toast('Shared saving turned off here.');};var ok0=el('button','btn','Done');ok0.type='button';ok0.onclick=close;a0.append(off,ok0);d.appendChild(a0);return;}
+ d.appendChild(el('p',null,ops.length?ops.length+' change'+(ops.length===1?' is':'s are')+' saved in this browser and already included in Export Excel. Other people see them once they are published to the shared tracker.':'Your edits are saved in this browser and included in Export Excel. Other people see them once they are published to the shared tracker.'));
+ d.appendChild(el('p',null,'To publish from here, enter a GitHub access key once (fine-grained token for the growth-office-tracker repository, Contents: read and write). It stays in this browser only. Or ask Claude to publish your edits.'));
+ var f=el('form','form');var tk=field(f,'GitHub access key (optional)',inp('','password'),true);tk.autocomplete='off';d.appendChild(f);
+ var msg=el('p','note');d.appendChild(msg);var a=el('div','acts');var c=el('button','btn ghost','Close');c.type='button';c.onclick=close;var s=el('button','btn',ops.length?'Connect and publish':'Connect');s.type='button';
+ async function go(){if(!tk.value.trim()){msg.textContent='Enter the access key, or close this window to keep your edits in this browser.';return;}s.disabled=true;msg.textContent='Checking…';var prev=ed;ed={name:who()||'Editor',token:tk.value.trim()};try{R0=await fetchRemote();lsSet(ed);if(ops.length){msg.textContent='Publishing…';await publishOps();}else{D=applyOps(R0,ops);render();}close();toast('Shared with the team.');}catch(err){ed=prev;msg.textContent='Could not connect: '+err.message;s.disabled=false;}}
+ f.onsubmit=function(e){e.preventDefault();go();};s.onclick=go;a.append(c,s);
+ if(ops.length){var dz=el('button','btn warn','Discard my '+ops.length+' change'+(ops.length===1?'':'s'));dz.type='button';dz.onclick=function(){if(dz.dataset.sure){ops=[];saveOps();D=applyOps(R0,ops);close();render();toast('Your local changes were discarded.');}else{dz.dataset.sure='1';dz.textContent='Click again to discard';}};a.insertBefore(dz,c);}
+ d.appendChild(a);});}
 function diffWhat(old,ch){return Object.keys(ch).filter(function(k){return (old[k]||'')!==(ch[k]||'');}).map(function(k){return k==='status'?'status '+(old[k]||'—')+' → '+ch[k]:k==='due'?'due '+(old[k]||'—')+' → '+(ch[k]||'—'):k==='priority'?'priority '+(old[k]||'—')+' → '+(ch[k]||'—'):k+' updated';}).join(', ');}
-async function save(id,ch,msg){try{toast('Saving…');await pushRemote(function(fresh){var r=fresh.items.find(function(x){return x.id===id;});if(!r)throw new Error('This action was removed by someone else.');var w=diffWhat(r,ch);if(ch.status==='Completed'&&r.status!=='Completed')ch.completedAt=today();if(ch.status&&ch.status!=='Completed')ch.completedAt='';Object.assign(r,ch);r.history=(r.history||[]).concat([{at:new Date().toISOString(),by:ed.name,what:w||'saved'}]);},msg);toast('Saved for everyone.');}catch(e){toast(e.message);}}
+function save(id,ch,msg){var r=items().find(function(x){return x.id===id;});if(!r)return;if(ch.status==='Completed'&&r.status!=='Completed')ch.completedAt=today();if(ch.status&&ch.status!=='Completed'&&r.completedAt)ch.completedAt='';var w=diffWhat(r,ch);if(!w){toast('Nothing changed.');return;}commit([{t:'edit',id:id,ch:ch,at:new Date().toISOString(),by:who()||(ed&&ed.name)||'Editor',what:w}],msg);}
 function editDlg(r){var isNew=!r;r=r||{company:st.co||D.companies[0],action:'',raised:today(),due:'',poc:'',notes:'',next:'',priority:'',status:'Open'};
  dlg(function(d){d.appendChild(el('h3',null,isNew?'Add action':'Edit action'));var f=el('form','form');
   var co=field(f,'Company',sel(D.companies,r.company));var stt=field(f,'Status',sel(STATUSES,r.status));
@@ -414,10 +448,10 @@ function editDlg(r){var isNew=!r;r=r||{company:st.co||D.companies[0],action:'',r
   var pr=field(f,'Priority',sel([''].concat(PRIS),r.priority));var du=field(f,'Due date (leave empty for TBC)',inp(isDate(r.due)?r.due:'','date'));
   var po=field(f,'POC / Support',inp(r.poc),true);var no=field(f,'Notes',ta(r.notes),true);var nx=field(f,'Next step',ta(r.next),true);
   d.appendChild(f);var msg=el('p','note');d.appendChild(msg);var a=el('div','acts');
-  if(!isNew){var rm=el('button','btn warn','Remove action');rm.type='button';rm.onclick=function(){if(rm.dataset.sure){close();pushRemote(function(fresh){fresh.items=fresh.items.filter(function(x){return x.id!==r.id;});},'Removed: '+r.action).then(function(){toast('Removed.');},function(e){toast(e.message);});}else{rm.dataset.sure='1';rm.textContent='Click again to remove';}};a.appendChild(rm);}
+  if(!isNew){var rm=el('button','btn warn','Remove action');rm.type='button';rm.onclick=function(){if(rm.dataset.sure){close();commit([{t:'rm',id:r.id,at:new Date().toISOString(),by:who()||'Editor'}],'Removed: '+r.action);}else{rm.dataset.sure='1';rm.textContent='Click again to remove';}};a.appendChild(rm);}
   var c=el('button','btn ghost','Cancel');c.type='button';c.onclick=close;var s=el('button','btn',isNew?'Add':'Save');s.type='button';
   s.onclick=function(){if(!ac.value.trim()){msg.textContent='The action item needs a title.';return;}var ch={company:co.value,status:stt.value,action:ac.value.trim(),priority:pr.value,due:du.value||(isDate(r.due)?'TBC':(r.due||'TBC')),poc:po.value.trim(),notes:no.value.trim(),next:nx.value.trim()};
-   close();if(isNew){var id=Math.random().toString(16).slice(2,12);ch.id=id;ch.raised=today();ch.history=[{at:new Date().toISOString(),by:ed.name,what:'added'}];pushRemote(function(fresh){fresh.items.push(ch);},'Added: '+ch.action).then(function(){toast('Added for everyone.');st.open[id]=true;},function(e){toast(e.message);});}
+   close();if(isNew){var id=Math.random().toString(16).slice(2,12);ch.id=id;ch.raised=today();ch.history=[{at:new Date().toISOString(),by:who()||'Editor',what:'added'}];commit([{t:'add',item:ch,at:new Date().toISOString()}],'Added: '+ch.action);}
    else save(r.id,ch,'Edited: '+ch.action);};
   a.append(c,s);d.appendChild(a);});}
 // Excel import / export
@@ -430,7 +464,7 @@ async function parseX(buf){var wb=XLSX.read(buf,{type:'array',cellDates:true});v
  var h=rows.findIndex(function(r){return norm(r[0]).toLowerCase()==='company'&&/action/i.test(norm(r[1]));});if(h<0)throw new Error('Could not find the "Company | Action Item" header row.');
  var body=rows.slice(h+1).filter(function(r){return r.some(function(c){return norm(c)!=='';});});var first='';for(var i=0;i<body.length;i++){if(norm(body[i][0])){first=norm(body[i][0]).toUpperCase();break;}}
  var cur='',out=[],P={high:'High',medium:'Medium',low:'Low'},S={'in progress':'In Progress','on hold':'On Hold','completed':'Completed','open':'Open','':'Open'};
- for(var j=0;j<body.length;j++){var r=body[j];if(norm(r[0]))cur=norm(r[0]).toUpperCase();var act=norm(r[1]);if(!act)continue;var co=cur||first;
+ for(var j=0;j<body.length;j++){var r=body[j];if(norm(r[0]))cur=norm(r[0]).toUpperCase();var act=norm(r[1]);if(!act)continue;var co=cur||first;co=REV[co.toLowerCase()]||co;
   var raised=xd(r[2]);if(raised==='TBC')raised='';out.push({id:await sha1(keyOf(co,act)),company:co,action:act,raised:raised,due:xd(r[3]),poc:norm(r[4]),notes:norm(r[5]),next:norm(r[6]),priority:P[norm(r[7]).toLowerCase()]||'',status:S[norm(r[8]).toLowerCase()]||norm(r[8])||'Open'});}
  return out;}
 function importDlg(list,fname){var cur={};items().forEach(function(r){cur[r.id]=r;});var F=['raised','due','poc','notes','next','priority','status'];
@@ -440,24 +474,94 @@ function importDlg(list,fname){var cur={};items().forEach(function(r){cur[r.id]=
   var df=el('div','diff');function sec(t,arr,f){if(!arr.length)return;df.appendChild(el('b',null,t+' ('+arr.length+')'));var ul=el('ul');arr.slice(0,40).forEach(function(x){ul.appendChild(el('li',null,f(x)));});df.appendChild(ul);}
   sec('New',add,function(x){return x.company+' · '+x.action;});sec('Changed',chg,function(p){return p[0].company+' · '+p[0].action+' — '+p[1].join(', ');});sec('Not in this file (kept)',gone,function(x){return x.company+' · '+x.action;});
   df.appendChild(el('span','note',same+' unchanged.'));d.appendChild(df);var a=el('div','acts');var c=el('button','btn ghost','Cancel');c.type='button';c.onclick=close;
-  var s=el('button','btn','Apply import');s.type='button';s.disabled=!add.length&&!chg.length;s.onclick=function(){close();pushRemote(function(fresh){var m={};fresh.items.forEach(function(r){m[r.id]=r;});var now=new Date().toISOString();
-    list.forEach(function(x){var o=m[x.id];if(!o){x.history=[{at:now,by:ed.name,what:'added from Excel'}];fresh.items.push(x);if(fresh.companies.indexOf(x.company)<0)fresh.companies.push(x.company);return;}var dd=F.filter(function(k){return (o[k]||'')!==(x[k]||'');});if(!dd.length)return;var w=diffWhat(o,x);if(x.status==='Completed'&&o.status!=='Completed')o.completedAt=today();F.forEach(function(k){o[k]=x[k];});o.history=(o.history||[]).concat([{at:now,by:ed.name,what:'Excel: '+(w||dd.join(', '))}]);});
-    fresh.source=fname+' (Action Tracker sheet), imported '+fmt(today());},'Excel import: '+add.length+' new, '+chg.length+' changed').then(function(){toast('Import saved for everyone.');},function(e){toast(e.message);});};
+  var s=el('button','btn','Apply import');s.type='button';s.disabled=!add.length&&!chg.length;s.onclick=function(){close();var now=new Date().toISOString(),by=who()||'Editor',nops=[];
+    add.forEach(function(x){var it=clone(x);it.history=[{at:now,by:by,what:'added from Excel'}];nops.push({t:'add',item:it,at:now});});
+    chg.forEach(function(p){var x=p[0],ch={};F.forEach(function(k){ch[k]=x[k];});var o=cur[x.id];if(x.status==='Completed'&&o.status!=='Completed')ch.completedAt=today();nops.push({t:'edit',id:x.id,ch:ch,at:now,by:by,what:'Excel: '+(diffWhat(o,ch)||p[1].join(', '))});});
+    commit(nops,'Excel import ('+fname+'): '+add.length+' new, '+chg.length+' changed');};
   a.append(c,s);d.appendChild(a);});}
 $('xfile').addEventListener('change',async function(){var f=this.files[0];this.value='';if(!f)return;if(!window.XLSX){toast('The Excel reader did not load. Check your connection.');return;}try{var list=await parseX(await f.arrayBuffer());importDlg(list,f.name);}catch(e){toast('Could not read the file: '+e.message);}});
-function exportX(){if(!window.XLSX){toast('The Excel writer did not load.');return;}var R=items().slice().sort(function(a,b){return D.companies.indexOf(a.company)-D.companies.indexOf(b.company)||a.action.localeCompare(b.action);});
- var aoa=[['GROWTH OFFICE  |  ACTION TRACKER'],[],['Total Actions','Open','In Progress','On Hold','Overdue','Completed'],[R.length,R.filter(function(r){return r.status==='Open';}).length,R.filter(function(r){return r.status==='In Progress';}).length,R.filter(function(r){return r.status==='On Hold';}).length,R.filter(late).length,R.filter(function(r){return r.status==='Completed';}).length],['Company','Action Item','Date Raised','Due Date','POC / Support','Notes','Next Step','Priority','Status']];
- var last='';R.forEach(function(r){aoa.push([r.company!==last?r.company:'',r.action,r.raised||'',r.due||'',r.poc||'',r.notes||'',r.next||'',r.priority||'',r.status]);last=r.company;});
- var ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:12},{wch:60},{wch:12},{wch:12},{wch:34},{wch:60},{wch:50},{wch:10},{wch:12}];var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Action Tracker');XLSX.writeFile(wb,'Growth Office Tracker - '+today()+'.xlsx');}
+function loadScript(src){return new Promise(function(ok,no){if(document.querySelector('script[src="'+src+'"]')){var w=setInterval(function(){if(window.ExcelJS){clearInterval(w);ok();}},100);setTimeout(function(){clearInterval(w);window.ExcelJS?ok():no(new Error('timeout'));},15000);return;}var sc=document.createElement('script');sc.src=src;sc.onload=ok;sc.onerror=function(){no(new Error('Could not load the Excel writer.'));};document.head.appendChild(sc);});}
+var XCO={'MITHAQUNA':'233536','KOUSHAN':'B5443D','TASHEEL':'7656A6','MIDWAM':'E58A35','KNKT':'0070C0','FIRST SERVE':'F2C200'};
+var XST={'In Progress':['E3E9FF','2F4FD8'],'On Hold':['FFF1D6','9A6200'],'Completed':['DDF3E6','2E7D52'],'Open':['ECEEF2','4B5363']};
+var XPR={'High':'C2352F','Medium':'B7791F','Low':'6B7385'};
+function xdate(s){return isDate(s)?new Date(s+'T00:00:00Z'):(s||'');}
+async function exportX(){
+ try{toast('Building the Excel file…');if(!window.ExcelJS)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js');}catch(e){toast(e.message);return;}
+ var R=items().slice().sort(function(a,b){return D.companies.indexOf(a.company)-D.companies.indexOf(b.company)||(late(b)-late(a))||String(a.due||'9').localeCompare(String(b.due||'9'))||a.action.localeCompare(b.action);});
+ var wb=new ExcelJS.Workbook();wb.creator='Growth Office';wb.created=new Date();wb.calcProperties.fullCalcOnLoad=true;
+ var INK='17202C',LINE='D9DEE7',F='Calibri',now=new Date(Date.now()+3*3600e3).toISOString(),stamp=fmtD(now.slice(0,10))+' '+now.slice(0,4)+', '+now.slice(11,16)+' Riyadh';
+ function fill(c){return {type:'pattern',pattern:'solid',fgColor:{argb:'FF'+c}};}
+ var thin={style:'thin',color:{argb:'FF'+LINE}},box={top:thin,left:thin,bottom:thin,right:thin};
+ function title(ws,text,sub,span){ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9,margins:{left:0.4,right:0.4,top:0.5,bottom:0.5,header:0.2,footer:0.2}};ws.mergeCells(1,1,1,span);var c=ws.getCell(1,1);c.value=text;c.font={name:F,size:16,bold:true,color:{argb:'FFFFFFFF'}};c.fill=fill(INK);c.alignment={vertical:'middle',indent:1};ws.getRow(1).height=32;
+  ws.mergeCells(2,1,2,span);var s2=ws.getCell(2,1);s2.value=sub;s2.font={name:F,size:10,italic:true,color:{argb:'FF5C6677'}};s2.alignment={indent:1};}
+ function head(row,labels){labels.forEach(function(l,i){var c=row.getCell(i+1);c.value=l;c.font={name:F,bold:true,color:{argb:'FFFFFFFF'},size:10.5};c.fill=fill('2F3B4F');c.alignment={vertical:'middle',wrapText:true};c.border=box;});row.height=22;}
+ var COLS2=[['Company',13],['Action Item',52],['Date Raised',12],['Due Date',12],['POC / Support',28],['Notes',48],['Next Step',42],['Priority',10],['Status',13],['Days Overdue',10],['Last Change',30]];
+ function actionRow(ws,rowNo,r,withCo){var hs=(r.history||[]).slice(-1)[0];var vals=[r.company?nm(r.company):'',r.action,xdate(r.raised),xdate(r.due),r.poc||'',r.notes||'',r.next||'',r.priority||'',r.status,null,hs?fmt(hs.at.slice(0,10))+' · '+(hs.by||'')+' · '+hs.what:''];
+  if(!withCo)vals.shift();var row=ws.getRow(rowNo);row.values=vals;var off=withCo?0:-1;
+  row.eachCell({includeEmpty:true},function(c,i){if(i>vals.length)return;c.font={name:F,size:10.5};c.alignment={vertical:'top',wrapText:true};c.border=box;});
+  if(withCo){var cc=row.getCell(1),col=XCO[r.company];if(col){cc.fill=fill(col);cc.font={name:F,size:10.5,bold:true,color:{argb:col==='F2C200'?'FF17202C':'FFFFFFFF'}};}else cc.font={name:F,size:10.5,bold:true};}
+  row.getCell(2+off).font={name:F,size:10.5,bold:true,color:{argb:'FF17202C'}};
+  [3+off,4+off].forEach(function(i){var c=row.getCell(i);if(c.value instanceof Date)c.numFmt='dd mmm yyyy';c.alignment={vertical:'top',horizontal:'center'};});
+  var pc=row.getCell(8+off);if(XPR[r.priority])pc.font={name:F,size:10.5,bold:true,color:{argb:'FF'+XPR[r.priority]}};pc.alignment={vertical:'top',horizontal:'center'};
+  var sc=row.getCell(9+off),sx=XST[r.status];if(sx){sc.fill=fill(sx[0]);sc.font={name:F,size:10.5,bold:true,color:{argb:'FF'+sx[1]}};}sc.alignment={vertical:'top',horizontal:'center'};
+  var dc=row.getCell(10+off),D4=ws.getCell(rowNo,4+off).address,S9=ws.getCell(rowNo,9+off).address;dc.value={formula:'IF(AND(ISNUMBER('+D4+'),'+S9+'<>"Completed",'+D4+'<TODAY()),TODAY()-'+D4+',"")',result:late(r)?lateBy(r):''};dc.font={name:F,size:10.5,bold:true,color:{argb:'FFC2352F'}};dc.alignment={vertical:'top',horizontal:'center'};
+  row.getCell(11+off).font={name:F,size:9,color:{argb:'FF5C6677'}};
+  if(r.status==='Completed')[2+off,6+off,7+off].forEach(function(i){row.getCell(i).font={name:F,size:10.5,color:{argb:'FF7A8394'},bold:i===2+off};});}
+ var last=4+R.length;
+ var sm=wb.addWorksheet('Summary',{properties:{tabColor:{argb:'FF17202C'}},views:[{showGridLines:false}]});
+ // 1. Action Tracker (master; Import Excel reads this sheet)
+ var at=wb.addWorksheet('Action Tracker',{views:[{state:'frozen',xSplit:2,ySplit:4}],properties:{tabColor:{argb:'FF2F4FD8'}}});
+ at.columns=COLS2.map(function(c){return {width:c[1]};});
+ title(at,'Growth Office — Action Tracker','Exported '+stamp+' · '+R.length+' actions · includes every edit made in the dashboard. Filter with the arrows in row 4.',COLS2.length);
+ head(at.getRow(4),COLS2.map(function(c){return c[0];}));
+ R.forEach(function(r,i){actionRow(at,5+i,r,true);});
+ at.autoFilter={from:{row:4,column:1},to:{row:4+R.length,column:COLS2.length}};
+ // 2. Summary (formulas recalc when the Action Tracker sheet is edited in Excel)
+ sm.columns=[{width:18},{width:12},{width:13},{width:12},{width:13},{width:12},{width:12},{width:13},{width:13}];
+ title(sm,'Growth Office — Summary','Exported '+stamp+'. Numbers update automatically if you edit the Action Tracker sheet.',9);
+ var A="'Action Tracker'!",rng=function(col){return A+'$'+col+'$5:$'+col+'$'+last;};
+ var K=[['Total actions','COUNTA('+rng('B')+')',R.length,'2F4FD8'],['In progress','COUNTIF('+rng('I')+',"In Progress")',R.filter(function(r){return r.status==='In Progress';}).length,'2F4FD8'],['High priority','COUNTIFS('+rng('H')+',"High",'+rng('I')+',"<>Completed")',R.filter(function(r){return r.priority==='High'&&r.status!=='Completed';}).length,'B7791F'],['Overdue','COUNT('+rng('J')+')',R.filter(late).length,'C2352F'],['Completed','COUNTIF('+rng('I')+',"Completed")',R.filter(function(r){return r.status==='Completed';}).length,'2E7D52'],['Not started','COUNTIF('+rng('I')+',"Open")',R.filter(function(r){return r.status==='Open';}).length,'6B7385']];
+ K.forEach(function(k,i){var c1=sm.getCell(4,i+2),c2=sm.getCell(5,i+2);c1.value=k[0];c1.font={name:F,size:9,bold:true,color:{argb:'FF5C6677'}};c1.alignment={horizontal:'center',wrapText:true};c1.border={top:{style:'medium',color:{argb:'FF'+k[3]}}};
+  c2.value={formula:k[1],result:k[2]};c2.font={name:F,size:20,bold:true,color:{argb:'FF'+k[3]}};c2.alignment={horizontal:'center'};});
+ sm.getRow(5).height=30;
+ head(sm.getRow(7),['Company','Actions','In progress','On hold','Not started','Completed','Overdue','High priority','% complete']);
+ sm.getCell(7,1).alignment={vertical:'middle',indent:1};
+ D.companies.forEach(function(co,i){var rn=8+i,T=R.filter(function(r){return r.company===co;}),q='"'+nm(co)+'"',cA=rng('A'),cI=rng('I');
+  var vals=[nm(co),{formula:'COUNTIF('+cA+','+q+')',result:T.length},{formula:'COUNTIFS('+cA+','+q+','+cI+',"In Progress")',result:T.filter(function(r){return r.status==='In Progress';}).length},{formula:'COUNTIFS('+cA+','+q+','+cI+',"On Hold")',result:T.filter(function(r){return r.status==='On Hold';}).length},{formula:'COUNTIFS('+cA+','+q+','+cI+',"Open")',result:T.filter(function(r){return r.status==='Open';}).length},{formula:'COUNTIFS('+cA+','+q+','+cI+',"Completed")',result:T.filter(function(r){return r.status==='Completed';}).length},{formula:'COUNTIFS('+cA+','+q+','+rng('J')+',">0")',result:T.filter(late).length},{formula:'COUNTIFS('+cA+','+q+','+rng('H')+',"High",'+cI+',"<>Completed")',result:T.filter(function(r){return r.priority==='High'&&r.status!=='Completed';}).length},{formula:'IF(B'+rn+'=0,"",F'+rn+'/B'+rn+')',result:T.length?T.filter(function(r){return r.status==='Completed';}).length/T.length:''}];
+  var row=sm.getRow(rn);row.values=vals;row.eachCell({includeEmpty:true},function(c,j){c.font={name:F,size:10.5};c.alignment={horizontal:j===1?'left':'center',indent:j===1?1:0};c.border=box;if(rn%2===0)c.fill=fill('F4F6FA');});
+  var col=XCO[co];var c1=row.getCell(1);c1.font={name:F,size:10.5,bold:true};if(col){c1.border={left:{style:'thick',color:{argb:'FF'+col}},top:thin,bottom:thin,right:thin};}
+  row.getCell(7).font={name:F,size:10.5,bold:true,color:{argb:'FFC2352F'}};row.getCell(9).numFmt='0%';});
+ var tr=8+D.companies.length,tot=sm.getRow(tr);tot.values=['Total'].concat(['B','C','D','E','F','G','H'].map(function(L){return {formula:'SUM('+L+'8:'+L+(tr-1)+')'};})).concat([{formula:'IF(B'+tr+'=0,"",F'+tr+'/B'+tr+')'}]);
+ tot.eachCell(function(c,j){c.font={name:F,size:10.5,bold:true};c.alignment={horizontal:j===1?'left':'center',indent:j===1?1:0};c.border={top:{style:'medium',color:{argb:'FF17202C'}}};});tot.getCell(9).numFmt='0%';
+ var nr=tr+2;sm.mergeCells(nr,1,nr,9);var nh=sm.getCell(nr,1);nh.value='Needs attention — overdue, then due in the next 14 days';nh.font={name:F,size:12,bold:true,color:{argb:'FF17202C'}};
+ head(sm.getRow(nr+1),['Company','Action','','','Owner','','Due','Status','Days overdue']);sm.mergeCells(nr+1,2,nr+1,4);sm.mergeCells(nr+1,5,nr+1,6);
+ var att=R.filter(late).sort(function(a,b){return a.due.localeCompare(b.due);}).concat(R.filter(soon).sort(function(a,b){return a.due.localeCompare(b.due);}));
+ att.forEach(function(r,i){var rn2=nr+2+i,row=sm.getRow(rn2);row.values=[nm(r.company),r.action,'','',r.poc||'—','',xdate(r.due),r.status,late(r)?lateBy(r):''];sm.mergeCells(rn2,2,rn2,4);sm.mergeCells(rn2,5,rn2,6);
+  row.eachCell({includeEmpty:true},function(c){c.font={name:F,size:10};c.alignment={vertical:'top',wrapText:true};c.border=box;});row.getCell(7).numFmt='dd mmm yyyy';row.getCell(9).font={name:F,size:10,bold:true,color:{argb:'FFC2352F'}};
+  if(!late(r))row.getCell(9).value='due soon';row.height=Math.max(18,Math.max(Math.ceil(r.action.length/46),Math.ceil(String(r.poc||'').length/28))*15);});
+ if(!att.length){sm.getCell(nr+2,1).value='Nothing overdue or due in the next 14 days.';}
+ // 3. One sheet per company
+ D.companies.forEach(function(co){var T=R.filter(function(r){return r.company===co;});if(!T.length)return;var name=nm(co).replace(/[\[\]\:\*\?\/\\]/g,' ').slice(0,31);
+  var ws=wb.addWorksheet(name,{views:[{state:'frozen',xSplit:1,ySplit:4}],properties:{tabColor:{argb:'FF'+(XCO[co]||'6B7385')}}});
+  ws.columns=COLS2.slice(1).map(function(c){return {width:c[1]};});
+  var dn=T.filter(function(r){return r.status==='Completed';}).length;
+  title(ws,nm(co)+' — Growth Office actions',T.length+' actions · '+T.filter(late).length+' overdue · '+dn+' completed · exported '+stamp,COLS2.length-1);
+  ws.getCell(1,1).fill=fill(XCO[co]&&XCO[co]!=='F2C200'?XCO[co]:INK);
+  head(ws.getRow(4),COLS2.slice(1).map(function(c){return c[0];}));T.forEach(function(r,i){actionRow(ws,5+i,r,false);});
+  ws.autoFilter={from:{row:4,column:1},to:{row:4+T.length,column:COLS2.length-1}};});
+ wb.views=[{activeTab:0}];
+ var buf=await wb.xlsx.writeBuffer();var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Growth Office Tracker - '+today()+'.xlsx';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);
+ toast('Excel downloaded'+(ops.length?' (includes your '+ops.length+' edit'+(ops.length===1?'':'s')+')':'')+'.');}
 // wire
 $('q').addEventListener('input',function(){st.q=this.value.trim();table();});
 $('f-poc').addEventListener('change',function(){st.poc=this.value;render();});
 $('f-clear').addEventListener('click',function(){st.co=st.poc=st.status=st.pri=st.gap=st.q='';$('q').value='';render();});
-$('b-edit').addEventListener('click',connectDlg);$('b-add').addEventListener('click',function(){editDlg(null);});$('b-import').addEventListener('click',function(){$('xfile').click();});$('b-export').addEventListener('click',exportX);
+$('b-edit').addEventListener('click',function(){setEdit(!EDIT);if(EDIT)toast('Edit mode is on. Click any action to change it.');});$('e-done').addEventListener('click',function(){setEdit(false);});$('e-add').addEventListener('click',function(){editDlg(null);});$('e-import').addEventListener('click',function(){$('xfile').click();});$('e-share').addEventListener('click',shareDlg);$('e-name').addEventListener('change',function(){try{localStorage.setItem('got-name',this.value.trim());}catch(e){}});$('b-add').addEventListener('click',function(){editDlg(null);});$('b-import').addEventListener('click',function(){$('xfile').click();});$('b-export').addEventListener('click',exportX);
 async function boot(){var m=/[#&]k=([A-Za-z0-9_-]+)/.exec(location.hash);
  if(!m){$('gate').querySelector('h2').textContent='Private link needed';$('gate-msg').textContent='This tracker opens only from its full private link. Ask the Growth Office for the link.';return;}
  try{KEY=await crypto.subtle.importKey('raw',b64u(m[1]),'AES-GCM',false,['encrypt','decrypt']);ed=lsGet();
-  try{D=await fetchRemote();}catch(e){if(ed){ed=null;D=await fetchRemote();}else throw e;}
+  try{R0=await fetchRemote();}catch(e){if(ed){ed=null;R0=await fetchRemote();}else throw e;}
+  ops=loadOps();D=applyOps(R0,ops);try{EDIT=localStorage.getItem('got-editmode')==='1';$('e-name').value=who();}catch(e){}
   $('gate').hidden=true;['hbar','conav','kpis','row2','reg','gapsec','foot'].forEach(function(id){$(id).hidden=false;});render();
  }catch(e){$('gate').querySelector('h2').textContent='This link could not open the tracker';$('gate-msg').textContent='The key in the link does not match the data, or the data could not be loaded. Check that you copied the full link.';}}
 boot();
