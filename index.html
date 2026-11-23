@@ -342,6 +342,7 @@ var REPO='AlHarith-Hindi/growth-office-tracker', FILE='data.enc.json', LS='got-e
 var STATUSES=['Open','In Progress','On Hold','Completed'], PRIS=['High','Medium','Low'];
 var KEY=null, D=null, R0=null, sha=null, ed=null, ops=[], EDIT=false, LOC='got-local-v1';
 var NAMES={'MITHAQUNA':'Mithaquna','KOUSHAN':'Koushan','TASHEEL':'Tasheel','MIDWAM':'Midwam','ALBADR':'Al Badr','KNKT':'KNKT','3RD LINE':'3rd Line','ENTERGAME':'EnterGame','ZFP':'ZFP','SLFE':'SLFE','FIRST SERVE':'First Serve'};
+var HIDE_CO=['ZFP','SLFE']; /* Harith 23 Nov: not part of the Growth Office tracker */
 var LOGO={'MITHAQUNA':'mithaquna','MIDWAM':'midwam','KOUSHAN':'koushan','TASHEEL':'tasheel','KNKT':'knkt','ZFP':'zfp','FIRST SERVE':'firstserve'};
 function logoEl(c){var f=LOGO[c];if(!f)return null;var b=el('span','cologo'+(f==='knkt'?' dark':''));var im=new Image();im.src='logos/'+f+'.webp';im.alt=nm(c)+' logo';im.decoding='async';b.appendChild(im);return b;}
 var REV={};Object.keys(NAMES).forEach(function(k){REV[NAMES[k].toLowerCase()]=k;});
@@ -394,6 +395,7 @@ function applyOps(base,list){var d=clone(base);list.forEach(function(o){
  if(o.t==='edit'){var r=d.items.find(function(x){return x.id===o.id;});if(!r)return;var w=diffWhat(r,o.ch);Object.assign(r,o.ch);r.history=(r.history||[]).concat([{at:o.at,by:o.by,what:o.what||w||'edited'}]);if(r.company&&d.companies.indexOf(r.company)<0)d.companies.push(r.company);}
  else if(o.t==='add'){if(!d.items.some(function(x){return x.id===o.item.id;})){d.items.push(clone(o.item));if(d.companies.indexOf(o.item.company)<0)d.companies.push(o.item.company);}}
  else if(o.t==='rm'){d.items=d.items.filter(function(x){return x.id!==o.id;});}});
+ d.companies=(d.companies||[]).filter(function(c){return HIDE_CO.indexOf(c)<0;});d.items=d.items.filter(function(x){return HIDE_CO.indexOf(x.company)<0;});
  if(list.length)d.localEdits=list.length;return d;}
 async function commit(newOps,msg){
  if(ed&&ed.token){toast('Saving…');try{await pushRemote(function(fresh){var x=applyOps(fresh,newOps);fresh.items=x.items;fresh.companies=x.companies;},msg);toast('Saved for everyone.');}catch(e){toast(e.message);}return;}
